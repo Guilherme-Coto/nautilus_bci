@@ -1,0 +1,19 @@
+Purpose:
+Simple eye tracker paradigm.
+
+Description:
+Shows a white fixation cross on black background in the middle of the screen for a randomized duration between 2.75 and 3.25 seconds.
+Afterward the fixation cross disappears a white ball is shown for 3 seconds in one of the corners of the window.
+
+Approx. Duration:
+3:20
+
+Groups:
+1 ... Top Left Corner
+2 ... Top Right Corner
+3 ... Bottom Left Corner
+4 ... Bottom Right Corner
+ 
+Instructions to the patient:
+Your task is to focus the fixation cross and during the task period the white ball.
+

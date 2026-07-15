@@ -1,0 +1,10 @@
+# Boundary file with 6930 positions and 13856 polygons
+# date generated: 19-Dec-2003
+
+UnitPosition	mm
+NumberPositions=	6930
+Positions	subject1_brain.bps
+
+NumberPolygons=	13856
+TypePolygons=		3
+Polygons	subject1_brain.bpl

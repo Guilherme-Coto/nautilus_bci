@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<montage>
+   <version>1.2</version>
+   <selectgrid>extended_10_20</selectgrid>
+   <montagename>C:\Work\SVN\gBSanalyze\trunk\gBSanalyze\testdata\montage\mindBEAGLE_P300.mat</montagename>
+   <constellations/>
+   <electrodenumber>1,2,3,4,5,6,7,8</electrodenumber>
+   <electrodename>FCz,C3,Cz,C4,CP1,CPz,CP2,Pz</electrodename>
+   <xposition>-0,-0.71,0,0.71,-0.37,0,0.37,-0</xposition>
+   <yposition>0.38,0,0,0,-0.41,-0.38,-0.41,-0.71</yposition>
+   <zposition>0.92,0.71,1,0.71,0.83,0.92,0.83,0.71</zposition>
+   <radius>1</radius>
+   <polar_phi>90,180,0,0,227.96,270,312.04,270</polar_phi>
+   <polar_theta>23.0856,44.7878,0,44.7878,33.9185,23.0856,33.9185,44.7878</polar_theta>
+   <xposition_2d>0.5,0.3375,0.5,0.6625,0.4236,0.5,0.5764,0.5</xposition_2d>
+   <yposition_2d>0.5792,0.5,0.5,0.5,0.4192,0.4208,0.4192,0.3375</yposition_2d>
+</montage>

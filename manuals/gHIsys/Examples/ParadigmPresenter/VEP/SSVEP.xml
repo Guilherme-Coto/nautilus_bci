@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Data  xmlns="xsd"
+       xmlns:ns="http://www.w3.org/2001/XMLSchema-instance"
+       ns:schemaLocation="xsd ../../ParadigmSchema.xsd">
+
+
+
+<Paradigm BaseFolder="./media/">
+  <Task ns:type="SingleTask" ID="ST_PreParadigm" DurationSeconds="10">
+    <Stimulus ns:type="TextStimulus" Caption="+"/>
+  </Task>
+    <Task ns:type="MultiTask" ID="MT_Seconds" SampleSize="100">
+      <Task ns:type="MultiTask" ID="MT_VS">
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.01667">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+          <Stimulus ns:type="PictureStimulus" FileName="stim.png" Scaling="Manual" ManualScalingPercent="20" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        </Task>
+        <Task ns:type="SingleTask" DurationSeconds="0.03333">
+          <Stimulus ns:type="PictureStimulus" FileName="ssvep_bg.png"/>
+        </Task>
+      </Task>
+    </Task>
+  <Task ns:type="SingleTask" ID="ST_PostParadigm" DurationSeconds="5">
+    <Stimulus ns:type="TextStimulus" Caption="Thank You!"/>
+  </Task>
+</Paradigm>
+</Data>

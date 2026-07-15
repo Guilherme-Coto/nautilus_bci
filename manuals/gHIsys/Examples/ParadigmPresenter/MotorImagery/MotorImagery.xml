@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Data  xmlns="xsd"
+           xmlns:ns="http://www.w3.org/2001/XMLSchema-instance"
+           ns:schemaLocation="xsd ../ParadigmSchema.xsd">
+
+  <Paradigm BaseFolder="media/" TaskOrder="Deterministic">
+    <Task ns:type="SingleTask" ID="ST_PreParadigm" DurationSeconds="10">
+      <Stimulus ns:type="TextStimulus" Caption="+"/>
+    </Task>
+    <Task ns:type="MultiTask" ID="MT_Trials" TaskOrder="Deterministic" SampleSize="160">
+      <Task ns:type="MultiTask" ID="MT_Baseline" TaskOrder="RandomWithReplacement" SampleSize="1">
+        <Task ns:type="SingleTask" ID="ST_Baseline1" DurationSeconds="4.0" Group="0"/>
+        <Task ns:type="SingleTask" ID="ST_Baseline2" DurationSeconds="4.2" Group="0"/>
+        <Task ns:type="SingleTask" ID="ST_Baseline3" DurationSeconds="4.4" Group="0"/>
+        <Task ns:type="SingleTask" ID="ST_Baseline4" DurationSeconds="4.6" Group="0"/>
+        <Task ns:type="SingleTask" ID="ST_Baseline5" DurationSeconds="4.8" Group="0"/>
+      </Task>
+      <Task ns:type="MultiTask" ID="MT_Target" TaskOrder="RandomWithoutReplacement" SampleSize="1">
+        <Task ns:type="SingleTask" ID="ST_Left" DurationSeconds="4.0" Group="1" Multiplicity="5">
+          <Stimulus ns:type="PictureStimulus" FileName="left.png"/>
+        </Task>
+        <Task ns:type="SingleTask" ID="ST_Right" DurationSeconds="4.0" Group="2" Multiplicity="5">
+          <Stimulus ns:type="PictureStimulus" FileName="right.png"/>
+        </Task>
+      </Task>
+    </Task>
+    <Task ns:type="SingleTask" ID="ST_PostParadigm" DurationSeconds="5">
+      <Stimulus ns:type="TextStimulus" Caption="Thank You!"/>
+    </Task>
+  </Paradigm>
+</Data>

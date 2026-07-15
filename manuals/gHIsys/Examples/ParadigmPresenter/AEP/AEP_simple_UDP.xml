@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Data xmlns="xsd" xmlns:ns="http://www.w3.org/2001/XMLSchema-instance" ns:schemaLocation="xsd ../../ParadigmSchema.xsd">
+  <Paradigm BaseFolder="media/" TaskOrder="Deterministic" UdpAddress="127.0.0.1" UdpPort="1000">
+    <Task ns:type="SingleTask" ID="ST_Pre" DurationSeconds="10">
+      <Stimulus ns:type="TextStimulus" Caption="+"/>
+    </Task>
+    <Task ns:type="MultiTask" ID="MT_Paradigm" TaskOrder="Deterministic" SampleSize="250">
+	  <Task ns:type="SingleTask" ID="ST_Target" DurationSeconds="0.2">
+		  <Stimulus ns:type="AudioStimulus" FileName="Target_trigleft.wav" UdpMessage="1"/>
+      </Task>
+      <Task ns:type="SingleTask" ID="ST_Baseline" DurationSeconds="0.8"/>  
+    </Task>
+  </Paradigm>
+</Data>

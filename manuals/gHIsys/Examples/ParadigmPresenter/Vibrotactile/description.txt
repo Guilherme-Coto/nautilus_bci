@@ -1,0 +1,16 @@
+Purpose:
+Vibrotactile stimulation of 5 fingers
+
+Description:
+5 channels of the g.STIMbox are triggered randomly for 200 ms each, in randomized intervals of 1-1.5 seconds. 40 trials per channel generated.
+
+Task Duration:
+Pre-Run: 10 s
+Stimulation: 200 ms
+Pause: 1-1.5 s
+Total Approx.: 5:10 minutes
+
+Groups:
+1-5 ... Finger 1-5
+0   ... else
+

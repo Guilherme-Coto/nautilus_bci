@@ -1,0 +1,21 @@
+[project]
+name = "scripts"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "colorama>=0.4.6",
+    "matplotlib>=3.11.0",
+    "numpy>=2.5.0",
+    "pygds",
+    "pylsl>=1.18.2",
+    "pyqtgraph>=0.14.0",
+    "pyside6>=6.11.1",
+    "scipy>=1.18.0",
+    "gpype>=0.1.0",
+]
+
+[tool.uv.sources]
+pygds = { path = "../../../../Documents/gtec/gNEEDaccessClientAPI/Python/pygds-1.24.0-py3-none-any.whl" }
+gpype = { path = "../../gpype" }

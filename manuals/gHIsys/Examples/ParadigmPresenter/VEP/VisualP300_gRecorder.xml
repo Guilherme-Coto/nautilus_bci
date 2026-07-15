@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Data  xmlns="xsd"
+           xmlns:ns="http://www.w3.org/2001/XMLSchema-instance"
+           ns:schemaLocation="xsd ../ParadigmSchema.xsd">
+
+  <Paradigm BaseFolder="media/" TaskOrder="Deterministic" UdpAddress="127.0.0.1" UdpPort="1000">
+    <Task ns:type="SingleTask" ID="ST_PreParadigm" DurationSeconds="10">
+      <Stimulus ns:type="TextStimulus" Caption="+"/>
+    </Task>
+    <Task ns:type="MultiTask" ID="MT_Wrapper" TaskOrder="Deterministic" SampleSize="150">
+      <Task ns:type="MultiTask" ID="MT_All" TaskOrder="Deterministic" SampleSize="16">
+        <Task ns:type="SingleTask" ID="ST_Dark" DurationSeconds="0.1">
+        </Task>
+        <Task ns:type="MultiTask" ID="MT_Stim" TaskOrder="RandomWithoutReplacement" SampleSize="1">
+          <Task ns:type="SingleTask" ID="ST_Target" DurationSeconds="0.1" Group="1">
+            <Stimulus ns:type="PictureStimulus" FileName="target.jpg" UdpMessage="gR(1)"/>
+          </Task>
+		  <Task ns:type="SingleTask" ID="ST_NT1" DurationSeconds="0.1" Group="2">
+            <Stimulus ns:type="PictureStimulus" FileName="nt1.jpg" UdpMessage="gR(2)"/>
+          </Task>
+          <Task ns:type="SingleTask" ID="ST_NT2" DurationSeconds="0.1" Group="2">
+            <Stimulus ns:type="PictureStimulus" FileName="nt2.jpg" UdpMessage="gR(2)"/>
+          </Task>
+          <Task ns:type="SingleTask" ID="ST_NT3" DurationSeconds="0.1" Group="2">
+            <Stimulus ns:type="PictureStimulus" FileName="nt3.jpg" UdpMessage="gR(2)"/>
+          </Task>
+          <Task ns:type="SingleTask" ID="ST_NT4" DurationSeconds="0.1" Group="2">
+            <Stimulus ns:type="PictureStimulus" FileName="nt4.jpg" UdpMessage="gR(2)"/>
+          </Task>
+          <Task ns:type="SingleTask" ID="ST_NT5" DurationSeconds="0.1" Group="2">
+            <Stimulus ns:type="PictureStimulus" FileName="nt5.jpg" UdpMessage="gR(2)"/>
+          </Task>
+          <Task ns:type="SingleTask" ID="ST_NT6" DurationSeconds="0.1" Group="2">
+            <Stimulus ns:type="PictureStimulus" FileName="nt6.jpg" UdpMessage="gR(2)"/>
+          </Task>
+          <Task ns:type="SingleTask" ID="ST_NT7" DurationSeconds="0.1" Group="2">
+            <Stimulus ns:type="PictureStimulus" FileName="nt7.jpg" UdpMessage="gR(2)"/>
+          </Task>
+        </Task>
+      </Task>
+    </Task>
+  </Paradigm>
+</Data>

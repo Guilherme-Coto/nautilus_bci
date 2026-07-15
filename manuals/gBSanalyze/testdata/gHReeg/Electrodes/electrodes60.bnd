@@ -1,0 +1,10 @@
+# Boundary file with 60 positions and 98 polygons
+# date generated: 10-Nov-2003
+
+UnitPosition	mm
+NumberPositions=	60
+Positions	electrodes60.bps
+
+NumberPolygons=	98
+TypePolygons=		3
+Polygons	electrodes60.bpl

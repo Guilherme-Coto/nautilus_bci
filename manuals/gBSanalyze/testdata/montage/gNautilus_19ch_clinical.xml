@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<montage>
+   <version>1.2</version>
+   <selectgrid>extended_10_20</selectgrid>
+   <montagename>C:\Work\SVN\gBSanalyze\trunk\gBSanalyze\testdata\montage\gNautilus_19ch_clinical.mat</montagename>
+   <constellations/>
+   <electrodenumber>1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19</electrodenumber>
+   <electrodename>FP1,FP2,F7,F3,Fz,F4,F8,T7,C3,Cz,C4,T8,P7,P3,Pz,P4,P8,O1,O2</electrodename>
+   <xposition>-0.31,0.31,-0.81,-0.57,0,0.57,0.81,-1,-0.71,0,0.71,1,-0.81,-0.57,-0,0.57,0.81,-0.31,0.31</xposition>
+   <yposition>0.95,0.95,0.59,0.7,0.71,0.7,0.59,0,0,0,0,0,-0.59,-0.7,-0.71,-0.7,-0.59,-0.95,-0.95</yposition>
+   <zposition>0,0,0,0.44,0.71,0.44,0,0,0.71,1,0.71,0,0,0.44,0.71,0.44,0,0,0</zposition>
+   <radius>1</radius>
+   <polar_phi>108,72,144,129.1,90,50.9,36,180,180,0,0,0,216,230.9,270,309.1,324,252,288</polar_phi>
+   <polar_theta>90,90,90,64,45,64,90,90,45,0,45,90,90,64,45,64,90,90,90</polar_theta>
+   <xposition_2d>0.3877,0.6123,0.2061,0.3628,0.5,0.6372,0.7939,0.1367,0.3375,0.5,0.6625,0.8633,0.2061,0.3628,0.5,0.6372,0.7939,0.3877,0.6123</xposition_2d>
+   <yposition_2d>0.8455,0.8455,0.7135,0.6733,0.6625,0.6733,0.7135,0.5,0.5,0.5,0.5,0.5,0.2865,0.3267,0.3375,0.3267,0.2865,0.1545,0.1545</yposition_2d>
+</montage>

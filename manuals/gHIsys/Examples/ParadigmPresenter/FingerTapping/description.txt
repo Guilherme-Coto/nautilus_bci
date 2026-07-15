@@ -1,0 +1,23 @@
+Purpose:
+Localization of cortical finger regions
+Comparison with and extension of existing experiments
+
+Description:
+Interleaved instruction and distraction stimulus (latter randomized between 1.7 and 2.5 s)
+10 trials per class per run
+
+Approx. Duration:
+2:50
+
+Groups:
+1 ... Thumb
+2 ... Index
+3 ... Middle
+4 ... Ring
+5 ... Little
+6 ... Distractor
+ 
+Instructions to the patient:
+Your task is to move fingers. Please perform a "tap" TWO times.
+[If applicable] The resting position should be very relaxed and without muscle contraction.
+

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<montage>
+   <version>1.2</version>
+   <selectgrid>extended_10_20</selectgrid>
+   <montagename>C:\Work\SVN\gBSanalyze\trunk\gBSanalyze\testdata\montage\recoveriX.mat</montagename>
+   <constellations/>
+   <electrodenumber>1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16</electrodenumber>
+   <electrodename>FC5,FC1,FCz,FC2,FC6,C5,C3,C1,Cz,C2,C4,C6,CP5,CP1,CP2,CP6</electrodename>
+   <xposition>-0.88,-0.37,-0,0.37,0.88,-0.92,-0.71,-0.38,0,0.38,0.71,0.92,-0.88,-0.37,0.37,0.88</xposition>
+   <yposition>0.36,0.41,0.38,0.41,0.36,0,0,0,0,0,0,0,-0.36,-0.41,-0.41,-0.36</yposition>
+   <zposition>0.33,0.83,0.92,0.83,0.33,0.38,0.71,0.92,1,0.92,0.71,0.38,0.33,0.83,0.83,0.33</zposition>
+   <radius>1</radius>
+   <polar_phi>157.74,132.04,90,47.96,22.2603,180,180,180,0,0,0,0,202.26,227.96,312.04,337.74</polar_phi>
+   <polar_theta>70.7671,33.9185,23.0856,33.9185,70.7671,67.7006,44.7878,23.0856,0,23.0856,44.7878,67.7006,70.7671,33.9185,33.9185,70.7671</polar_theta>
+   <xposition_2d>0.2559,0.4236,0.5,0.5764,0.7441,0.2452,0.3375,0.4208,0.5,0.5792,0.6625,0.7548,0.2559,0.4236,0.5764,0.7441</xposition_2d>
+   <yposition_2d>0.5956,0.5808,0.5792,0.5808,0.5956,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.4044,0.4192,0.4192,0.4044</yposition_2d>
+</montage>

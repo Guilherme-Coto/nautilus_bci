@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Data  xmlns="xsd"
+           xmlns:ns="http://www.w3.org/2001/XMLSchema-instance"
+           ns:schemaLocation="xsd ../ParadigmSchema.xsd">
+
+  <Paradigm TaskOrder="Deterministic">
+    <Task ns:type="SingleTask" ID="ST_PreParadigm" DurationSeconds="10">
+      <Stimulus ns:type="TextStimulus" Caption="+" />
+    </Task>
+  	<Task ns:type="MultiTask" ID="MT_All" TaskOrder="Deterministic" SampleSize="400">
+		<Task ns:type="MultiTask" ID="MT_Stim" TaskOrder="RandomWithoutReplacement" SampleSize="1">
+			<Task ns:type="SingleTask" ID="ST_Finger1" DurationSeconds="0.2" Group="1">
+				<Stimulus ns:type="DigitalOutStimulus">
+					<Port Index="1"/>
+				</Stimulus>
+			</Task>
+			<Task ns:type="SingleTask" ID="ST_Finger2" DurationSeconds="0.2" Group="2">
+				<Stimulus ns:type="DigitalOutStimulus">
+					<Port Index="2"/>
+				</Stimulus>
+			</Task>
+			<Task ns:type="SingleTask" ID="ST_Finger3" DurationSeconds="0.2" Group="3">
+				<Stimulus ns:type="DigitalOutStimulus">
+					<Port Index="3"/>
+				</Stimulus>
+			</Task>
+			<Task ns:type="SingleTask" ID="ST_Finger4" DurationSeconds="0.2" Group="4">
+				<Stimulus ns:type="DigitalOutStimulus">
+					<Port Index="4"/>
+				</Stimulus>
+			</Task>
+			<Task ns:type="SingleTask" ID="ST_Finger5" DurationSeconds="0.2" Group="5">
+				<Stimulus ns:type="DigitalOutStimulus">
+					<Port Index="5"/>
+				</Stimulus>
+			</Task>
+		</Task>
+		<Task ns:type="MultiTask" ID="MT_Pause" TaskOrder="RandomWithReplacement" SampleSize="1">
+			<Task ns:type="SingleTask" ID="ST_Pause1" DurationSeconds="1.0"   Group="0"/>
+			<Task ns:type="SingleTask" ID="ST_Pause2" DurationSeconds="1.125" Group="0"/>
+			<Task ns:type="SingleTask" ID="ST_Pause3" DurationSeconds="1.25"  Group="0"/>
+			<Task ns:type="SingleTask" ID="ST_Pause4" DurationSeconds="1.375" Group="0"/>
+			<Task ns:type="SingleTask" ID="ST_Pause5" DurationSeconds="1.5"   Group="0"/>
+      </Task>
+    </Task>
+    <Task ns:type="SingleTask" ID="ST_PostParadigm" DurationSeconds="5">
+      <Stimulus ns:type="TextStimulus" Caption="Thank You!" />
+    </Task>
+  </Paradigm>
+</Data>

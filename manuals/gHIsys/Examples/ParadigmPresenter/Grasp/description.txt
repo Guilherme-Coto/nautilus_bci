@@ -1,0 +1,18 @@
+Purpose:
+Right hand grasping paradigm for fNIRS processing.
+
+Description:
+In the resting period, a scrambled picture is shown for 15 seconds.
+Afterwards the instruction to perform a gasping movement is shown for 10 seconds.
+
+Approx. Duration:
+6:15
+
+Groups:
+1 ... Grasping
+2 ... Rest
+3 ... Post Paradigm
+ 
+Instructions to the patient:
+Your task is to perform a grasping movement ( form fist and open hand repeatedly) upon command.
+

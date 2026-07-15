@@ -1,0 +1,10 @@
+# Boundary file with 1722 positions and 3311 polygons
+# date generated: 07-Sep-2007
+
+UnitPosition	mm
+NumberPositions=	1722
+Positions	brain30mm.bps
+
+NumberPolygons=	3311
+TypePolygons=		3
+Polygons	brain30mm.bpl

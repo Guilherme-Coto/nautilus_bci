@@ -1,0 +1,16 @@
+Purpose:
+Distinction of left vs. right hand movement imagination
+
+Description:
+40 left/right arrows (each) are randomly presented, interleaved by a baseline non-taget task.
+
+Task Duration:
+Pre-Run: 10 s
+Left/Right: 4 s
+Baseline: 4.0-4.8 s (random)
+Total Approx.: 11:30 minutes
+
+Groups:
+1 ... left
+2 ... right
+0 ... else

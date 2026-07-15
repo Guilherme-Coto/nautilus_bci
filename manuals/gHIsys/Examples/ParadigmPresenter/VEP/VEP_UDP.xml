@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Data  xmlns="xsd" xmlns:ns="http://www.w3.org/2001/XMLSchema-instance" ns:schemaLocation="xsd ../ParadigmSchema.xsd">
+  <Paradigm BaseFolder="media/" TaskOrder="Deterministic" UdpAddress="127.0.0.1" UdpPort="1000">
+    <Task ns:type="SingleTask" ID="ST_PreParadigm" DurationSeconds="10">
+      <Stimulus ns:type="TextStimulus" Caption="+"/>
+    </Task>
+    <Task ns:type="MultiTask" ID="MT_Wrapper" TaskOrder="Deterministic" SampleSize="300">
+	   <Task ns:type="SingleTask" ID="ST_Target" DurationSeconds="0.15">
+         <Stimulus ns:type="PictureStimulus" FileName="target.jpg" UdpMessage="1"/>
+       </Task>
+       <Task ns:type="SingleTask" ID="ST_Dark" DurationSeconds="0.85">
+       </Task>
+    </Task>
+  </Paradigm>
+</Data>

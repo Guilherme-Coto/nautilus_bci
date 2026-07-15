@@ -1,0 +1,20 @@
+Purpose:
+Classification of 3 different gestures (open hand, fist, peace sign)
+
+Description:
+Interleaved instruction and distraction stimulus (latter randomized between 1.5 and 2.5 s)
+20 trials per class per run
+
+Approx. Duration:
+6:25
+
+Groups:
+1 ... Fist
+2 ... Hand
+3 ... Peace
+4 ... Scrambled
+ 
+Instructions to the patient:
+Your task is to form hand gestures as indicated by the picture. Form them quickly and firm.
+The resting position should be very relaxed and without muscle contraction.
+
