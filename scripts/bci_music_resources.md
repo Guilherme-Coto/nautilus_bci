@@ -1,62 +1,84 @@
-# BCI Music & EEG Sonification Resources
+# 🎧 Audio Track Guide: Obtaining, Converting, & Calibrating WAV Files for BCI Paradigms
 
-A compiled list of open-source GitHub repositories, frameworks, and datasets exploring the intersection of Brain-Computer Interfaces (BCIs), real-time EEG sonification, neural entrainment, and auditory decoding.
-
----
-
-## 🎵 Real-Time EEG Sonification & Music Synthesis
-Tools and frameworks designed to translate live brainwave signals (via LSL or direct hardware connections) into sound, MIDI, or musical parameters.
-
-### 1. [EEGsynth](https://github.com/eegsynth/eegsynth)
-*   **Language:** Python
-*   **Description:** A prominent, highly modular Python framework built to convert EEG, EMG, and ECG signals into sound, MIDI, music, and analog control voltages (CV) for hardware synthesizers in real time. Perfect for biofeedback and interactive BCI musical performances.
-
-### 2. [brain2music](https://github.com/Tallivm/brain2music)
-*   **Language:** Python
-*   **Description:** An AI-powered pipeline that maps EEG wave features and uses Stable Diffusion / Riffusion models to generate high-fidelity music reflecting brain states in real-time.
-
-### 3. [EEG-pd-sonification](https://github.com/jajcayn/EEG-pd-sonification)
-*   **Language:** Python & Pure Data (Pd)
-*   **Description:** Provides data processing scripts in Python coupled with Pure Data patches to generate rich acoustic feedback from multi-channel EEG signals.
-
-### 4. [NeuroZine](https://github.com/Avidabits/NeuroZine)
-*   **Language:** Python / Processing / Pure Data
-*   **Description:** A dedicated educational project that visualizes multi-channel EEG data and sonifies brainwaves into musical structures.
+This documentation guide details how to obtain, convert, calibrate, and manage audio tracks for the **Nautilus BCI 6-Track Music Memory Recall Paradigm** (`music_memory_task.py`) and **Looping Calibrator Studio** (`music_offset_calibrator.py`).
 
 ---
 
-## 🧠 Neural Entrainment & Music Research
-Scientific codebases studying how neural oscillations phase-lock to acoustic beats, speech envelopes, and musical structures.
+## ⚡ 1. Why PCM WAV Format is Required for BCI
 
-### 1. [entrainment_eeg](https://github.com/caligiu/entrainment_eeg)
-*   **Language:** Python (MNE-Python) & MATLAB (EEGLAB)
-*   **Description:** Contains scripts and experiment definitions evaluating how slow neural oscillations (Delta and Theta) entrain to periodic sentence structures and auditory rhythms. Excellent reference for custom filtering and frequency-locked analysis.
+To guarantee **zero-latency audio playback** and **sample-accurate offset seeking** during real-time BCI EEG trial sessions, all audio tracks are processed as uncompressed 16-bit 44.1kHz PCM `.wav` files.
 
-### 2. [eeg-music-reconstruction](https://github.com/nevcam/eeg-music-reconstruction)
-*   **Language:** Python (PyTorch)
-*   **Description:** Uses deep neural networks (CNNs, Transformers) to decode and reconstruct Mel-spectrograms of music tracks directly from the EEG signals of subjects listening to them.
-
-### 3. [Live-EEG_MusicGEN](https://github.com/hippobo/Live-EEG_MusicGEN)
-*   **Language:** Python
-*   **Description:** Employs machine learning models to infer emotional states from live EEG streams (like Muse) and dynamically generates matching musical compositions.
+### 🔴 The MP3 FFmpeg Stream Decoding Issue
+- Compressed formats (`.mp3`, `.aac`, `.m4a`) rely on variable frame headers. When seeking to mid-song offsets (e.g. $14.5\text{s}$ into a song), PySide6 / Qt6 `QMediaPlayer` using FFmpeg must parse stream headers asynchronously, causing initial loading stalls (`MediaStatus.LoadingMedia`) and inaccurate start offsets.
+- **16-bit 44.1kHz PCM `.wav` files** load synchronously in memory (`BufferedMedia`), allowing sample-accurate seek positioning down to the exact millisecond.
 
 ---
 
-## 📊 Public EEG Music Datasets
-Datasets of real brainwave recordings from subjects listening to different auditory tempos and musical genres.
+## 🛠️ 2. How to Convert Audio Files to 44.1kHz PCM WAV
 
-### 1. [Music-EEG Dataset](https://AdamosDA.github.io/Music-EEG/)
-*   **Link:** [GitHub Pages / Repo](https://github.com/AdamosDA/Music-EEG)
-*   **Description:** Open-access database containing multi-channel EEG recordings from subjects passively listening to various genres of music. Useful for testing classification and sonification algorithms without a headset.
+### A. Converting a Single Audio File (FFmpeg)
+If you have a new `.mp3`, `.flac`, or `.m4a` file, use FFmpeg in PowerShell/Command Prompt:
 
-### 2. [MUSIN-G (OpenNeuro)](https://openneuro.org/datasets/ds003774)
-*   **Link:** [OpenNeuro Portal](https://github.com/OpenNeuroDatasets/ds003774)
-*   **Description:** A comprehensive dataset focused on EEG brain responses to distinct genres and tempos of music.
+```powershell
+# Convert MP3 to 16-bit 44.1kHz Stereo PCM WAV
+ffmpeg -i input_track.mp3 -ar 44100 -ac 2 -c:a pcm_s16le output_track.wav
+```
+
+### B. Batch Converting a Folder of MP3 Files (Command Line)
+To convert all `.mp3` files in a folder at once:
+
+```cmd
+:: Windows Command Prompt (cmd)
+for %f in (*.mp3) do ffmpeg -i "%f" -ar 44100 -ac 2 -c:a pcm_s16le "%~nf.wav"
+```
+
+```powershell
+# Windows PowerShell
+Get-ChildItem -Filter *.mp3 | ForEach-Object {
+    ffmpeg -i $_.FullName -ar 44100 -ac 2 -c:a pcm_s16le "$($_.DirectoryName)\$($_.BaseName).wav"
+}
+```
+
+### C. Automated Converter Utility (`convert_music_tracks.py`)
+The codebase includes an automated python converter script that automatically scans `music_tracks/` for `.mp3` files and converts them into pristine `.wav` files:
+
+```powershell
+cd "C:\Users\VR\Documents\GitHub\nautilus_bci\scripts"
+uv run python convert_music_tracks.py
+```
 
 ---
 
-## 🔍 Key GitHub Topics to Explore
-To search for newly created or updated projects:
-*   [eeg-signal-processing](https://github.com/topics/eeg-signal-processing)
-*   [data-sonification](https://github.com/topics/data-sonification)
-*   [brain-computer-interface](https://github.com/topics/brain-computer-interface)
+## 🎛️ 3. Calibrating Mid-Song Theme Offsets (`music_offset_calibrator.py`)
+
+Many classical compositions and songs begin with quiet intros. To isolate iconic themes for auditory imagery BCI testing, use the **Companion Looping Calibrator Studio**:
+
+```powershell
+uv run python music_offset_calibrator.py
+```
+
+### Calibrator Features:
+1. **Dynamic Track Length Caps**: The offset slider upper limit automatically scales to match each track's exact total length (up to 7+ minutes).
+2. **Continuous Audio Looping**: Drag the slider while audio loops continuously to pinpoint the exact start millisecond of iconic melodies.
+3. **Loop Duration Tuner**: Adjust loop snippet duration from $1.0\text{s}$ to $10.0\text{s}$.
+4. **Automatic Instant Save**: Slider and input box changes automatically write to `music_offset_config.json` in real time.
+
+---
+
+## 📂 4. Subfolder Taxonomy & Auto-Discovery
+
+Place `.wav` files under `music_tracks/` organized by subfolders:
+
+```
+music_tracks/
+├── real/                           <-- Real Master Performances (Beethoven, Joplin, Bach, etc.)
+│   ├── real_beethoven_fur_elise.wav
+│   ├── real_joplin_entertainer.wav
+│   └── ...
+└── synthesis/                      <-- Synthesized Audio & BPM Beats
+    ├── beats_only/                 <-- Pure Rhythmic Percussion
+    ├── single_note_beats/          <-- A3 Tone Pulse + Beat
+    └── melodic_arrangements/       <-- Synthesized Keyboard Melodies
+```
+
+Both `music_memory_task.py` and `music_offset_calibrator.py` automatically discover any subfolder added under `music_tracks/` and list its `.wav` contents dynamically without requiring hardcoded updates.
