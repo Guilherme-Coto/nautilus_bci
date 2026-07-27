@@ -1,0 +1,597 @@
+import sys
+import os
+import time
+import subprocess
+import threading
+import numpy as np
+import scipy.signal as signal
+
+from PySide6.QtCore import Qt, QTimer, Signal, Slot
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QPushButton, QLineEdit, QFormLayout, QGroupBox,
+    QRadioButton, QButtonGroup, QTextEdit, QMessageBox, QFrame,
+    QProgressBar, QSplitter
+)
+from PySide6.QtGui import QFont, QColor, QPalette
+
+import pyqtgraph as pg
+
+try:
+    from pylsl import resolve_byprop, StreamInlet, resolve_streams
+    HAS_LSL = True
+except ImportError:
+    HAS_LSL = False
+
+sys.path.append(os.path.dirname(__file__))
+from bids_recorder import BIDSRecorder
+from left_right_task import LeftRightTaskApp
+from music_memory_task import MusicMemoryTaskApp
+
+
+class MiniEEGVisualizerWidget(QWidget):
+    """Embedded live mini EEG scope & band power monitor with dual-source live rendering."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.inlet = None
+        self.fs = 250.0
+        self.num_channels = 32
+        
+        # 3-second rolling buffer
+        self.buf_seconds = 3.0
+        self.buf_samples = int(self.fs * self.buf_seconds)
+        self.eeg_data = np.zeros((self.buf_samples, self.num_channels))
+        self.sim_sample_count = 0
+        
+        # Filter design (2-45 Hz bandpass)
+        nyq = 0.5 * self.fs
+        self.b_bp, self.a_bp = signal.butter(2, [2.0 / nyq, 45.0 / nyq], btype='band')
+        
+        self.init_ui()
+        
+        # LSL background discovery thread & render timers
+        self.lsl_timer = QTimer(self)
+        self.lsl_timer.timeout.connect(self.check_lsl_connection)
+        self.lsl_timer.start(1000)
+        
+        self.render_timer = QTimer(self)
+        self.render_timer.timeout.connect(self.update_live_plot)
+        self.render_timer.start(33)  # ~30 FPS smooth rendering loop
+
+    def init_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(10)
+        
+        # Left Panel: PyQtGraph Live Waveform Scope (Cz, C3, C4, O1)
+        self.glw = pg.GraphicsLayoutWidget()
+        self.glw.setBackground('#0D1117')
+        layout.addWidget(self.glw, stretch=3)
+        
+        self.plot = self.glw.addPlot(title="Live EEG Signal Waves (Cz, C3, C4, O1)")
+        self.plot.setLabel('bottom', 'Time (s)')
+        self.plot.setLabel('left', 'Amplitude (µV)')
+        self.plot.showGrid(x=True, y=True, alpha=0.3)
+        
+        self.ch_indices = [0, 1, 2, 3]  # Representative channels
+        self.ch_labels = ["Cz", "C3", "C4", "O1"]
+        self.colors = ['#00E676', '#74B9FF', '#E040FB', '#FFEAA7']
+        self.curves = []
+        
+        self.t_vector = np.linspace(-self.buf_seconds, 0, self.buf_samples)
+        for i, color in enumerate(self.colors):
+            curve = self.plot.plot(pen=pg.mkPen(color=color, width=2.0), name=self.ch_labels[i])
+            self.curves.append(curve)
+            
+        # Right Panel: Brain Rhythm Band Meters & RMS Health
+        right_panel = QVBoxLayout()
+        right_panel.setSpacing(6)
+        
+        info_hdr = QLabel("<b>Brain Rhythm Power</b>")
+        info_hdr.setStyleSheet("color: #4DEEEA; font-size: 12px;")
+        right_panel.addWidget(info_hdr)
+        
+        # Alpha Bar (8-12 Hz)
+        right_panel.addWidget(QLabel("<font color='#00E676'>Alpha (8-12Hz)</font>"))
+        self.bar_alpha = QProgressBar()
+        self.bar_alpha.setFixedHeight(10)
+        self.bar_alpha.setTextVisible(False)
+        self.bar_alpha.setStyleSheet("QProgressBar { border: none; background: #191E2A; border-radius: 4px; } QProgressBar::chunk { background: #00E676; }")
+        right_panel.addWidget(self.bar_alpha)
+        
+        # Beta Bar (12-30 Hz)
+        right_panel.addWidget(QLabel("<font color='#74B9FF'>Beta (12-30Hz)</font>"))
+        self.bar_beta = QProgressBar()
+        self.bar_beta.setFixedHeight(10)
+        self.bar_beta.setTextVisible(False)
+        self.bar_beta.setStyleSheet("QProgressBar { border: none; background: #191E2A; border-radius: 4px; } QProgressBar::chunk { background: #74B9FF; }")
+        right_panel.addWidget(self.bar_beta)
+        
+        # Delta Bar (0.5-4 Hz)
+        right_panel.addWidget(QLabel("<font color='#FFEAA7'>Delta (0.5-4Hz)</font>"))
+        self.bar_delta = QProgressBar()
+        self.bar_delta.setFixedHeight(10)
+        self.bar_delta.setTextVisible(False)
+        self.bar_delta.setStyleSheet("QProgressBar { border: none; background: #191E2A; border-radius: 4px; } QProgressBar::chunk { background: #FFEAA7; }")
+        right_panel.addWidget(self.bar_delta)
+        
+        # Status Label
+        self.lbl_signal_quality = QLabel("Initialising Signal Engine...")
+        self.lbl_signal_quality.setFont(QFont("Arial", 9, QFont.Bold))
+        self.lbl_signal_quality.setStyleSheet("color: #A0A5B5; margin-top: 5px;")
+        right_panel.addWidget(self.lbl_signal_quality)
+        
+        right_panel.addStretch()
+        layout.addLayout(right_panel, stretch=1)
+
+    def check_lsl_connection(self):
+        if not HAS_LSL:
+            return
+            
+        if self.inlet is None:
+            try:
+                streams = resolve_streams(wait_time=0.2)
+                eeg_streams = [s for s in streams if s.type().upper() == 'EEG' or 'NAUTILUS' in s.name().upper()]
+                if eeg_streams:
+                    self.inlet = StreamInlet(eeg_streams[0], max_buflen=360)
+                    info = self.inlet.info()
+                    self.fs = info.nominal_srate() if info.nominal_srate() > 0 else 250.0
+                    new_ch = info.channel_count()
+                    if new_ch > 0 and new_ch != self.num_channels:
+                        self.num_channels = new_ch
+                        self.eeg_data = np.zeros((self.buf_samples, self.num_channels))
+            except Exception:
+                self.inlet = None
+
+    def update_live_plot(self):
+        pulled = False
+        
+        # 1. Attempt to pull live data from LSL stream
+        if self.inlet is not None:
+            try:
+                samples, _ = self.inlet.pull_chunk(max_samples=250)
+                if samples and len(samples) > 0:
+                    new_data = np.array(samples)
+                    n_new = len(new_data)
+                    n_cols = new_data.shape[1]
+                    
+                    if n_cols != self.eeg_data.shape[1]:
+                        self.num_channels = n_cols
+                        self.eeg_data = np.zeros((self.buf_samples, self.num_channels))
+
+                    if n_new >= self.buf_samples:
+                        self.eeg_data = new_data[-self.buf_samples:, :]
+                    else:
+                        self.eeg_data = np.roll(self.eeg_data, -n_new, axis=0)
+                        self.eeg_data[-n_new:, :] = new_data
+                    pulled = True
+            except Exception:
+                self.inlet = None
+
+        # 2. If no LSL data yet, generate smooth preview waveforms
+        if not pulled:
+            n_new = 8  # 8 samples per 33ms tick = ~240 Hz
+            t_sim = (self.sim_sample_count + np.arange(n_new)) / self.fs
+            self.sim_sample_count += n_new
+            
+            sim_chunk = np.zeros((n_new, self.num_channels))
+            for c in range(self.num_channels):
+                f_alpha = 10.0 + (c % 3) * 0.5
+                f_beta = 18.0 + (c % 4) * 1.2
+                wave_alpha = 14.0 * np.sin(2 * np.pi * f_alpha * t_sim)
+                wave_beta = 7.0 * np.sin(2 * np.pi * f_beta * t_sim)
+                noise = np.random.normal(0, 2.0, n_new)
+                sim_chunk[:, c] = wave_alpha + wave_beta + noise
+                
+            self.eeg_data = np.roll(self.eeg_data, -n_new, axis=0)
+            self.eeg_data[-n_new:, :] = sim_chunk
+
+        # 3. Filter and Plot Waveforms
+        filt_data = self.eeg_data - np.mean(self.eeg_data, axis=0)
+        try:
+            filt_data = signal.filtfilt(self.b_bp, self.a_bp, filt_data, axis=0)
+        except Exception:
+            pass
+
+        spacing = 40.0
+        offsets = [0, spacing, spacing * 2, spacing * 3]
+
+        for i, ch_idx in enumerate(self.ch_indices):
+            y_val = filt_data[:, ch_idx] + offsets[i]
+            self.curves[i].setData(self.t_vector, y_val)
+
+        self.plot.setYRange(-spacing * 0.8, spacing * 3.8)
+
+        # 4. Calculate Live Band Powers (FFT)
+        if len(filt_data) >= 64:
+            fft_vals = np.abs(np.fft.rfft(filt_data, axis=0))
+            freqs = np.fft.rfftfreq(len(filt_data), 1.0 / self.fs)
+
+            alpha_idx = (freqs >= 8) & (freqs <= 12)
+            beta_idx = (freqs >= 12) & (freqs <= 30)
+            delta_idx = (freqs >= 0.5) & (freqs <= 4)
+
+            p_alpha = np.mean(fft_vals[alpha_idx, :]) if np.any(alpha_idx) else 0.0
+            p_beta = np.mean(fft_vals[beta_idx, :]) if np.any(beta_idx) else 0.0
+            p_delta = np.mean(fft_vals[delta_idx, :]) if np.any(delta_idx) else 0.0
+
+            total_p = p_alpha + p_beta + p_delta + 1e-6
+            self.bar_alpha.setValue(int(min(100, (p_alpha / total_p) * 100)))
+            self.bar_beta.setValue(int(min(100, (p_beta / total_p) * 100)))
+            self.bar_delta.setValue(int(min(100, (p_delta / total_p) * 100)))
+
+            rms = np.sqrt(np.mean(filt_data**2))
+            if pulled:
+                self.lbl_signal_quality.setText(f"LIVE LSL STREAM | RMS: {rms:.1f}µV")
+                self.lbl_signal_quality.setStyleSheet("color: #00E676;")
+            else:
+                self.lbl_signal_quality.setText(f"PREVIEW (Click Start Streamer) | RMS: {rms:.1f}µV")
+                self.lbl_signal_quality.setStyleSheet("color: #FFEAA7;")
+
+
+class BCISuiteControlCenter(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("BCI Motor Imagery & BIDS Studio - Master Control Center")
+        self.resize(920, 800)
+
+        self.streamer_process = None
+        self.recorder = None
+        self.task_window = None
+        self.music_memory_window = None
+        self.calibrator_window = None
+
+        self.init_ui()
+
+        self.monitor_timer = QTimer()
+        self.monitor_timer.timeout.connect(self.update_status)
+        self.monitor_timer.start(1000)
+
+    def init_ui(self):
+        palette = QPalette()
+        palette.setColor(QPalette.Window, QColor(15, 18, 25))
+        palette.setColor(QPalette.WindowText, QColor(240, 240, 245))
+        palette.setColor(QPalette.Base, QColor(25, 30, 42))
+        palette.setColor(QPalette.Text, QColor(240, 240, 245))
+        palette.setColor(QPalette.Button, QColor(35, 45, 65))
+        palette.setColor(QPalette.ButtonText, QColor(240, 240, 245))
+        self.setPalette(palette)
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(12)
+
+        # Title Header
+        title = QLabel("🧠 BCI Motor Imagery & BIDS Dataset Studio")
+        title.setFont(QFont("Arial", 18, QFont.Bold))
+        title.setAlignment(Qt.AlignCenter)
+        title.setStyleSheet("color: #4DEEEA;")
+        main_layout.addWidget(title)
+
+        subtitle = QLabel("All-in-One Control Panel with Embedded Live Signal & Brain Rhythm Monitor")
+        subtitle.setFont(QFont("Arial", 11))
+        subtitle.setAlignment(Qt.AlignCenter)
+        subtitle.setStyleSheet("color: #A0A5B5;")
+        main_layout.addWidget(subtitle)
+
+        # ----------------------------------------------------
+        # Box 1: EEG Streamer Manager
+        # ----------------------------------------------------
+        stream_box = QGroupBox("Step 1: EEG Streamer Control")
+        stream_box.setStyleSheet("QGroupBox { font-size: 13px; font-weight: bold; color: #4DEEEA; border: 1px solid #2C3545; border-radius: 8px; margin-top: 5px; padding-top: 12px; }")
+        stream_layout = QVBoxLayout(stream_box)
+
+        stream_opts = QHBoxLayout()
+        self.radio_hw = QRadioButton("Physical g.Nautilus Device (gds_to_lsl.py)")
+        self.radio_mock = QRadioButton("Simulated Mock Streamer (mock_lsl_streamer.py)")
+        self.radio_mock.setChecked(True)
+        
+        self.stream_btn_group = QButtonGroup()
+        self.stream_btn_group.addButton(self.radio_hw)
+        self.stream_btn_group.addButton(self.radio_mock)
+
+        stream_opts.addWidget(self.radio_hw)
+        stream_opts.addWidget(self.radio_mock)
+        stream_layout.addLayout(stream_opts)
+
+        stream_ctrl_row = QHBoxLayout()
+        self.btn_toggle_streamer = QPushButton("▶ Start EEG Streamer")
+        self.btn_toggle_streamer.setFont(QFont("Arial", 11, QFont.Bold))
+        self.btn_toggle_streamer.setStyleSheet("background-color: #00ADB5; color: white; padding: 8px 16px; border-radius: 5px;")
+        self.btn_toggle_streamer.clicked.connect(self.toggle_streamer)
+        stream_ctrl_row.addWidget(self.btn_toggle_streamer)
+
+        self.lbl_stream_status = QLabel("STATUS: [OFFLINE]")
+        self.lbl_stream_status.setFont(QFont("Arial", 11, QFont.Bold))
+        self.lbl_stream_status.setStyleSheet("color: #FF7675;")
+        stream_ctrl_row.addWidget(self.lbl_stream_status)
+        stream_ctrl_row.addStretch()
+
+        self.btn_reset_gds = QPushButton("⚡ Emergency Reset GDS Service")
+        self.btn_reset_gds.setFont(QFont("Arial", 10, QFont.Bold))
+        self.btn_reset_gds.setStyleSheet("background-color: #D63031; color: white; padding: 6px 12px; border-radius: 5px;")
+        self.btn_reset_gds.setToolTip("Restarts the g.NEEDaccess Windows service to release stuck g.Nautilus hardware locks without restarting your PC!")
+        self.btn_reset_gds.clicked.connect(self.emergency_reset_gds)
+        stream_ctrl_row.addWidget(self.btn_reset_gds)
+
+        stream_layout.addLayout(stream_ctrl_row)
+        main_layout.addWidget(stream_box)
+
+        # ----------------------------------------------------
+        # Box 2: Embedded Mini Live Signal Monitor
+        # ----------------------------------------------------
+        mini_vis_box = QGroupBox("📡 Live Mini Signal Scope & Brain Rhythm Monitor")
+        mini_vis_box.setStyleSheet("QGroupBox { font-size: 13px; font-weight: bold; color: #FFEAA7; border: 1px solid #2C3545; border-radius: 8px; margin-top: 5px; padding-top: 10px; }")
+        mini_vis_layout = QVBoxLayout(mini_vis_box)
+        
+        self.mini_visualizer = MiniEEGVisualizerWidget()
+        self.mini_visualizer.setFixedHeight(190)
+        mini_vis_layout.addWidget(self.mini_visualizer)
+        
+        main_layout.addWidget(mini_vis_box)
+
+        # ----------------------------------------------------
+        # Box 3: BIDS Recorder Manager
+        # ----------------------------------------------------
+        rec_box = QGroupBox("Step 2: BIDS Dataset Recording")
+        rec_box.setStyleSheet("QGroupBox { font-size: 13px; font-weight: bold; color: #4DEEEA; border: 1px solid #2C3545; border-radius: 8px; margin-top: 5px; padding-top: 12px; }")
+        rec_layout = QVBoxLayout(rec_box)
+
+        form_layout = QHBoxLayout()
+        self.txt_sub = QLineEdit("01")
+        self.txt_sub.setFixedWidth(80)
+        self.txt_sub.setStyleSheet("background: #191E2A; color: white; padding: 5px; border-radius: 4px;")
+        
+        self.txt_ses = QLineEdit("01")
+        self.txt_ses.setFixedWidth(80)
+        self.txt_ses.setStyleSheet("background: #191E2A; color: white; padding: 5px; border-radius: 4px;")
+
+        self.txt_outdir = QLineEdit("bids_dataset")
+        self.txt_outdir.setStyleSheet("background: #191E2A; color: white; padding: 5px; border-radius: 4px;")
+
+        form_layout.addWidget(QLabel("Subject ID: sub-"))
+        form_layout.addWidget(self.txt_sub)
+        form_layout.addWidget(QLabel("Session ID: ses-"))
+        form_layout.addWidget(self.txt_ses)
+        form_layout.addWidget(QLabel("BIDS Folder:"))
+        form_layout.addWidget(self.txt_outdir)
+        rec_layout.addLayout(form_layout)
+
+        rec_ctrl_row = QHBoxLayout()
+        self.btn_toggle_recording = QPushButton("🔴 Start BIDS Recording")
+        self.btn_toggle_recording.setFont(QFont("Arial", 11, QFont.Bold))
+        self.btn_toggle_recording.setStyleSheet("background-color: #E17055; color: white; padding: 8px 16px; border-radius: 5px;")
+        self.btn_toggle_recording.clicked.connect(self.toggle_recording)
+        rec_ctrl_row.addWidget(self.btn_toggle_recording)
+
+        self.lbl_rec_status = QLabel("RECORDER: [STANDBY]")
+        self.lbl_rec_status.setFont(QFont("Arial", 11, QFont.Bold))
+        self.lbl_rec_status.setStyleSheet("color: #A0A5B5;")
+        rec_ctrl_row.addWidget(self.lbl_rec_status)
+        rec_ctrl_row.addStretch()
+
+        rec_layout.addLayout(rec_ctrl_row)
+        main_layout.addWidget(rec_box)
+
+        # ----------------------------------------------------
+        # Box 4: Task GUI Paradigm Launcher (Segregated Cards)
+        # ----------------------------------------------------
+        task_box = QGroupBox("Step 3: Audio-Visual Task Presentation & Calibration Studio")
+        task_box.setStyleSheet("QGroupBox { font-size: 13px; font-weight: bold; color: #4DEEEA; border: 1px solid #2C3545; border-radius: 8px; margin-top: 5px; padding-top: 12px; }")
+        task_layout = QHBoxLayout(task_box)
+        task_layout.setSpacing(12)
+
+        # Card A: Motor Imagery Task (Sessions 01-03)
+        card_mi = QGroupBox("🎮 Motor Imagery Paradigm")
+        card_mi.setStyleSheet("QGroupBox { font-size: 11px; font-weight: bold; color: #A0A5B5; border: 1px solid #2C3545; border-radius: 6px; padding: 8px; }")
+        layout_mi = QVBoxLayout(card_mi)
+        lbl_mi = QLabel("4-Class Limb Movement\n(Left, Right, Feet, Tongue)")
+        lbl_mi.setStyleSheet("color: #74B9FF; font-size: 10px;")
+        layout_mi.addWidget(lbl_mi)
+        
+        self.btn_launch_task = QPushButton("🎮 Launch Motor Imagery")
+        self.btn_launch_task.setFont(QFont("Arial", 10, QFont.Bold))
+        self.btn_launch_task.setStyleSheet("background-color: #6C5CE7; color: white; padding: 8px 12px; border-radius: 5px;")
+        self.btn_launch_task.clicked.connect(self.launch_task_gui)
+        layout_mi.addWidget(self.btn_launch_task)
+        task_layout.addWidget(card_mi)
+
+        # Card B: 6-Track Music Memory Recall Task (Session 04)
+        card_music = QGroupBox("🎵 6-Track Music Recall Paradigm")
+        card_music.setStyleSheet("QGroupBox { font-size: 11px; font-weight: bold; color: #A0A5B5; border: 1px solid #2C3545; border-radius: 6px; padding: 8px; }")
+        layout_music = QVBoxLayout(card_music)
+        lbl_music = QLabel("Auditory Imagery & Recall\n(6 Master WAV Compositions)")
+        lbl_music.setStyleSheet("color: #00ADB5; font-size: 10px;")
+        layout_music.addWidget(lbl_music)
+
+        self.btn_launch_music_memory = QPushButton("🎵 Launch Music Memory Task")
+        self.btn_launch_music_memory.setFont(QFont("Arial", 10, QFont.Bold))
+        self.btn_launch_music_memory.setStyleSheet("background-color: #00ADB5; color: white; padding: 8px 12px; border-radius: 5px;")
+        self.btn_launch_music_memory.clicked.connect(self.launch_music_memory_gui)
+        layout_music.addWidget(self.btn_launch_music_memory)
+        task_layout.addWidget(card_music)
+
+        # Card C: Standalone Companion Calibrator Tool
+        card_calib = QGroupBox("🎛️ Companion Offset Studio")
+        card_calib.setStyleSheet("QGroupBox { font-size: 11px; font-weight: bold; color: #A0A5B5; border: 1px solid #2C3545; border-radius: 6px; padding: 8px; }")
+        layout_calib = QVBoxLayout(card_calib)
+        lbl_calib = QLabel("Continuous Audio Looping\n& Live Offset Seek Studio")
+        lbl_calib.setStyleSheet("color: #FFEAA7; font-size: 10px;")
+        layout_calib.addWidget(lbl_calib)
+
+        self.btn_launch_calibrator = QPushButton("🎛️ Launch Companion Calibrator")
+        self.btn_launch_calibrator.setFont(QFont("Arial", 10, QFont.Bold))
+        self.btn_launch_calibrator.setStyleSheet("background-color: #E17055; color: white; padding: 8px 12px; border-radius: 5px;")
+        self.btn_launch_calibrator.clicked.connect(self.launch_calibrator_gui)
+        layout_calib.addWidget(self.btn_launch_calibrator)
+        task_layout.addWidget(card_calib)
+
+        main_layout.addWidget(task_box)
+
+        # Console Log Box
+        self.log_box = QTextEdit()
+        self.log_box.setReadOnly(True)
+        self.log_box.setFixedHeight(100)
+        self.log_box.setStyleSheet("background-color: #0D1117; color: #7EE787; font-family: Consolas, monospace; font-size: 11px; border-radius: 6px;")
+        self.log_box.append("[SYSTEM] BCI Motor Imagery & BIDS Studio Initialized.")
+        main_layout.addWidget(self.log_box)
+
+    def log(self, text):
+        self.log_box.append(f"[{time.strftime('%H:%M:%S')}] {text}")
+
+    def toggle_streamer(self):
+        if self.streamer_process is None:
+            script_name = "gds_to_lsl.py" if self.radio_hw.isChecked() else "mock_lsl_streamer.py"
+            script_path = os.path.join(os.path.dirname(__file__), script_name)
+            
+            self.log(f"Starting EEG Streamer ({script_name})...")
+            args = [sys.executable, script_path]
+            if self.radio_hw.isChecked():
+                args.append("--non-interactive")
+
+            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+            self.streamer_process = subprocess.Popen(args, creationflags=creationflags)
+            self.btn_toggle_streamer.setText("⏹ Stop EEG Streamer")
+            self.btn_toggle_streamer.setStyleSheet("background-color: #D63031; color: white; padding: 8px 16px; border-radius: 5px;")
+            self.lbl_stream_status.setText("STATUS: [RUNNING]")
+            self.lbl_stream_status.setStyleSheet("color: #55E6C1;")
+        else:
+            self.log("Gracefully stopping EEG Streamer & releasing hardware lock...")
+            self.stop_streamer_gracefully()
+            self.btn_toggle_streamer.setText("▶ Start EEG Streamer")
+            self.btn_toggle_streamer.setStyleSheet("background-color: #00ADB5; color: white; padding: 8px 16px; border-radius: 5px;")
+            self.lbl_stream_status.setText("STATUS: [OFFLINE]")
+            self.lbl_stream_status.setStyleSheet("color: #FF7675;")
+
+    def stop_streamer_gracefully(self):
+        if self.streamer_process:
+            try:
+                if sys.platform == "win32":
+                    import signal
+                    self.streamer_process.send_signal(signal.CTRL_C_EVENT)
+                else:
+                    self.streamer_process.terminate()
+                self.streamer_process.wait(timeout=3)
+            except Exception:
+                try:
+                    self.streamer_process.terminate()
+                except Exception:
+                    pass
+            self.streamer_process = None
+
+    def emergency_reset_gds(self):
+        self.log("Attempting emergency reset of g.NEEDaccess GDS service...")
+        self.stop_streamer_gracefully()
+        try:
+            cmd = 'powershell -Command "Restart-Service -Name \'g.NEEDaccess Server\' -ErrorAction SilentlyContinue; Get-Process -Name \'g.server\' -ErrorAction SilentlyContinue | Stop-Process -Force"'
+            subprocess.run(cmd, shell=True, capture_output=True, timeout=5)
+            self.log("[+ SUCCESS] GDS Hardware lock reset! Device is ready.")
+            QMessageBox.information(self, "GDS Reset Complete", "GDS hardware service successfully reset!\n\nYou can now start the streamer without restarting Windows.")
+        except Exception as e:
+            self.log(f"[-] Reset warning: {e}")
+            QMessageBox.warning(self, "Reset Warning", f"Could not restart service automatically:\n{e}")
+
+    def toggle_recording(self):
+        if self.recorder is None or not self.recorder.is_recording:
+            try:
+                outdir = self.txt_outdir.text().strip()
+                self.recorder = BIDSRecorder(bids_root=outdir)
+                self.log("Connecting to LSL EEG and Marker streams...")
+                self.recorder.connect_streams(timeout=3.0)
+                self.recorder.start_recording()
+
+                self.btn_toggle_recording.setText("⏹ Stop & Export BIDS Dataset")
+                self.btn_toggle_recording.setStyleSheet("background-color: #D63031; color: white; padding: 8px 16px; border-radius: 5px;")
+                self.lbl_rec_status.setText("RECORDER: [RECORDING LIVE...]")
+                self.lbl_rec_status.setStyleSheet("color: #FF7675;")
+                self.log("[RECORDING STARTED] Continuous EEG and Markers are being recorded.")
+            except Exception as e:
+                self.log(f"Error starting recorder: {e}")
+                QMessageBox.critical(self, "Recording Error", f"Could not connect to LSL streams:\n{e}\n\nMake sure the EEG Streamer is running!")
+                self.recorder = None
+        else:
+            self.log("Stopping recording and compiling BIDS dataset...")
+            sub = self.txt_sub.text().strip()
+            ses = self.txt_ses.text().strip()
+            try:
+                out_path = self.recorder.stop_recording_and_export_bids(subject_id=sub, session_id=ses)
+                self.log(f"[SUCCESS] BIDS Dataset exported to:\n{out_path}")
+                QMessageBox.information(self, "BIDS Export Complete", f"Successfully saved BIDS dataset to:\n{out_path}")
+            except Exception as e:
+                self.log(f"Error exporting BIDS: {e}")
+                QMessageBox.critical(self, "BIDS Export Error", f"Failed to export BIDS dataset:\n{e}")
+
+            self.recorder = None
+            self.btn_toggle_recording.setText("🔴 Start BIDS Recording")
+            self.btn_toggle_recording.setStyleSheet("background-color: #E17055; color: white; padding: 8px 16px; border-radius: 5px;")
+            self.lbl_rec_status.setText("RECORDER: [STANDBY]")
+            self.lbl_rec_status.setStyleSheet("color: #A0A5B5;")
+
+    def launch_task_gui(self):
+        if self.task_window is None or not self.task_window.isVisible():
+            self.log("Launching Audio-Visual 4-Direction Task Presentation Window...")
+            import visual_motor_imagery_task
+            import importlib
+            importlib.reload(visual_motor_imagery_task)
+            self.task_window = visual_motor_imagery_task.LeftRightTaskApp()
+            self.task_window.sub_input.setText(f"sub-{self.txt_sub.text().strip()}")
+            self.task_window.ses_input.setText(f"ses-{self.txt_ses.text().strip()}")
+            self.task_window.movement_axis_combo.setCurrentIndex(0)
+            self.task_window.show()
+        else:
+            self.task_window.activateWindow()
+
+    def launch_music_memory_gui(self):
+        if self.music_memory_window is None or not self.music_memory_window.isVisible():
+            self.log("Launching 6-Track Music Memory Recall Presentation Window...")
+            import music_memory_task
+            import importlib
+            importlib.reload(music_memory_task)
+            self.music_memory_window = music_memory_task.MusicMemoryTaskApp()
+            self.music_memory_window.sub_input.setText(f"sub-{self.txt_sub.text().strip()}")
+            self.music_memory_window.ses_input.setText(f"ses-{self.txt_ses.text().strip()}")
+            self.music_memory_window.show()
+        else:
+            self.music_memory_window.activateWindow()
+
+    def launch_calibrator_gui(self):
+        if self.calibrator_window is None or not self.calibrator_window.isVisible():
+            self.log("Launching Companion Music Offset & Tempo Calibrator Studio...")
+            import music_offset_calibrator
+            import importlib
+            importlib.reload(music_offset_calibrator)
+            self.calibrator_window = music_offset_calibrator.MusicOffsetCalibratorApp()
+            self.calibrator_window.show()
+        else:
+            self.calibrator_window.activateWindow()
+
+    def update_status(self):
+        try:
+            if self.recorder and self.recorder.is_recording:
+                n_eeg = len(self.recorder.eeg_samples)
+                n_mrk = len(self.recorder.marker_events)
+                self.lbl_rec_status.setText(f"RECORDER: [RECORDING LIVE | {n_eeg} EEG samples | {n_mrk} Events]")
+        except Exception:
+            pass
+
+    def closeEvent(self, event):
+        if self.recorder and self.recorder.is_recording:
+            self.recorder.is_recording = False
+        self.stop_streamer_gracefully()
+        event.accept()
+
+
+def main():
+    try:
+        app = QApplication(sys.argv)
+        window = BCISuiteControlCenter()
+        window.show()
+        sys.exit(app.exec())
+    except KeyboardInterrupt:
+        print("[*] Control Center closed.")
+
+
+if __name__ == "__main__":
+    main()

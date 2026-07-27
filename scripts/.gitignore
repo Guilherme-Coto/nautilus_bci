@@ -1,0 +1,14 @@
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+.pytest_cache/
+*.log
+
+# OS metadata
+.DS_Store
+Thumbs.db

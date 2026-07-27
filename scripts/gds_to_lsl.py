@@ -121,31 +121,51 @@ def battery_monitor_loop(serial):
             time.sleep(1)
 
 def connect_headset():
-    print_header("g.Nautilus Connection & Setup Manager")
+    print_header("g.Nautilus Connection & Setup Manager (Dual-Transceiver Support)")
     
     # 1. Scan for devices
-    print(f"{Fore.YELLOW}[*] Scanning for connected BCI receiver...{Style.RESET_ALL}")
+    print(f"{Fore.YELLOW}[*] Scanning for connected BCI USB receivers...{Style.RESET_ALL}")
     cd = pygds.ConnectedDevices()
     if len(cd) == 0:
         print(f"{Fore.RED}[-] No connected receivers found. Please plug in the USB receiver and try again.{Style.RESET_ALL}")
         sys.exit(1)
         
-    serial = cd[0][0]
-    print(f"{Fore.GREEN}[+] Found receiver with serial: {serial}{Style.RESET_ALL}")
+    print(f"\n{Fore.GREEN}[+] Detected {len(cd)} connected USB receiver(s):{Style.RESET_ALL}")
+    for i, (ser, dev_type, in_use) in enumerate(cd):
+        dev_label = "fNIRS Transceiver" if "NF" in ser.upper() or "NIRS" in ser.upper() else "EEG Transceiver / g.Nautilus"
+        status_str = f"{Fore.RED}In Use{Style.RESET_ALL}" if in_use else f"{Fore.GREEN}Available{Style.RESET_ALL}"
+        print(f"  [{i+1}] Serial: {Fore.CYAN}{ser}{Style.RESET_ALL} | Type: {dev_label} | Status: {status_str}")
+
+    selected_idx = 0
+    if len(cd) > 1 and not NON_INTERACTIVE:
+        choice = input(f"\nSelect receiver to connect (1-{len(cd)}) [Default: 1]: ").strip()
+        if choice:
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(cd):
+                    selected_idx = idx
+            except ValueError:
+                pass
+
+    serial = cd[selected_idx][0]
+    is_fnirs_device = "NF" in serial.upper() or "NIRS" in serial.upper()
+    dev_type_name = "g.Nautilus fNIRS" if is_fnirs_device else "g.Nautilus EEG"
+    print(f"\n{Fore.GREEN}[+] Selected transceiver: {serial} ({dev_type_name}){Style.RESET_ALL}")
     
     # 2. Connect loop (handles powered-off headset)
     device = None
     attempt = 1
     while True:
         try:
-            print(f"{Fore.YELLOW}[*] Connecting to headset {serial} (attempt {attempt})...{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}[*] Connecting to {dev_type_name} ({serial}) [attempt {attempt}]...{Style.RESET_ALL}")
             device = pygds.GDS(serial, open_exclusively=False)
-            print(f"{Fore.GREEN}[+] Connected successfully to headset!{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}[+] Connected successfully to {dev_type_name}!{Style.RESET_ALL}")
             break
         except Exception as e:
             print(f"{Fore.RED}[-] Connection failed: {e}{Style.RESET_ALL}")
             print(f"\n{Fore.YELLOW}[!] The headset might be Powered OFF or out of wireless range.{Style.RESET_ALL}")
             print("    - Make sure the power button on the cap is turned ON (flashing LED).")
+            print("    - Ensure the external battery pack is switched ON for fNIRS.")
             print("    - Ensure the headset has charge or is in range.")
             if NON_INTERACTIVE:
                 if attempt >= 3:
@@ -161,7 +181,8 @@ def connect_headset():
                 sys.exit(0)
             attempt += 1
             
-    return device, serial
+    return device, serial, is_fnirs_device
+
 
 def configure_sampling_rate(device):
     print_header("Sampling Rate Selection")
@@ -234,15 +255,16 @@ def run_calibration(device):
 def run_impedance_loop(device):
     print_header("Impedance & Contact Quality Check")
     
+    if NON_INTERACTIVE:
+        print(f"{Fore.GREEN}[+] Skipping electrode impedance check (Default: No in non-interactive mode).{Style.RESET_ALL}")
+        return
+
+    choice = input("Would you like to run/rerun the electrode impedance check? (y/n) [Default: n]: ").strip().lower()
+    if choice != 'y':
+        print(f"{Fore.YELLOW}[*] Proceeding directly to EEG streaming.{Style.RESET_ALL}")
+        return
+
     while True:
-        if NON_INTERACTIVE:
-            choice = 'y'
-        else:
-            choice = input("Would you like to run/rerun the electrode impedance check? (y/n) [Default: y]: ").strip().lower()
-            
-        if choice == 'n':
-            print(f"{Fore.YELLOW}[*] Proceeding to streaming.{Style.RESET_ALL}")
-            break
             
         print(f"{Fore.YELLOW}[*] Measuring electrode impedances...{Style.RESET_ALL}")
         try:
@@ -418,7 +440,7 @@ def configure_hardware_filters(device):
 def main():
     global current_battery_level
     # 1. Connect
-    device, serial = connect_headset()
+    device, serial, is_fnirs_device = connect_headset()
     
     # Reset thread shutdown signal
     stop_event.clear()
@@ -464,16 +486,19 @@ def main():
             
         num_channels = len(channel_names)
         
+        stream_type_str = 'fNIRS' if is_fnirs_device else 'EEG'
+        stream_name_str = f'gNautilus_{stream_type_str}'
+
         print_header("Lab Streaming Layer (LSL) Output")
-        print(f"Headset Name: gNautilus (Serial: {serial})")
+        print(f"Headset Name: {stream_name_str} (Serial: {serial})")
         print(f"Sampling Rate: {sampling_rate} Hz")
         print(f"Active Channels: {num_channels}")
         print(f"Channel Names: {channel_names}")
         
         # Create LSL StreamInfo
         info = StreamInfo(
-            name='gNautilus',
-            type='EEG',
+            name=stream_name_str,
+            type=stream_type_str,
             channel_count=num_channels,
             nominal_srate=sampling_rate,
             channel_format='float32',
@@ -486,10 +511,11 @@ def main():
             chan = channels_meta.append_child("channel")
             chan.append_child_value("label", chan_name)
             chan.append_child_value("unit", "microvolts" if chan_name != "Battery" else "percent")
-            chan.append_child_value("type", "EEG" if chan_name != "Battery" else "AUX")
+            chan.append_child_value("type", stream_type_str if chan_name != "Battery" else "AUX")
             
         outlet = StreamOutlet(info)
-        print(f"\n{Fore.GREEN}[+] LSL Outlet created successfully. Stream name: 'gNautilus', type: 'EEG'{Style.RESET_ALL}")
+        print(f"\n{Fore.GREEN}[+] LSL Outlet created successfully. Stream name: '{stream_name_str}', type: '{stream_type_str}'{Style.RESET_ALL}")
+
         
         # Start background battery logger thread (uses data streamed in daq_callback, zero GDS collisions!)
         battery_thread = threading.Thread(target=battery_monitor_loop, args=(serial,))
@@ -527,7 +553,12 @@ def main():
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Streaming interrupted by user.{Style.RESET_ALL}")
     except Exception as e:
-        print(f"\n{Fore.RED}[- ] Error in streaming loop: {e}{Style.RESET_ALL}")
+        err_msg = str(e)
+        print(f"\n{Fore.RED}[-] Error in streaming loop: {err_msg}{Style.RESET_ALL}")
+        if "not creator" in err_msg or "acquisition session" in err_msg:
+            print(f"\n{Fore.YELLOW}[!] DIAGNOSIS: Another g.tec software (such as 'GtecSuite.exe' or 'gRecorder') is open and holding the device acquisition lock.{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}[+] SOLUTION: Please close GtecSuite / gRecorder (or stop acquisition in g.tec Suite), then run 'uv run python gds_to_lsl.py' again.{Style.RESET_ALL}\n")
+
     finally:
         print(f"\n{Fore.YELLOW}[*] Releasing GDS connection and cleaning up...{Style.RESET_ALL}")
         # Stop background thread

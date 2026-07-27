@@ -1,0 +1,13 @@
+onset	duration	trial_type	value	sample
+2.0	4.0	Task_Recall_Track_22	6	500
+9.744	0.0	Experiment_Start_Sub_sub-01_Ses_ses-01_Paradigm_MusicMemoryRecall_CueDur_5.0s	4	2436
+9.744	0.0	Trial_Start_1_Track_Track_5	10	2436
+9.744	1.0	Cue_Audio_Sample_Track_5	3	2436
+14.752	4.0	Task_Recall_Track_5	7	3688
+170.936	0.0	Experiment_Start_Sub_sub-01_Ses_ses-01_Paradigm_MusicMemoryRecall_CueDur_5.0s	4	42734
+170.936	0.0	Trial_Start_1_Track_Track_32	9	42734
+170.936	1.0	Cue_Audio_Sample_Track_32	2	42734
+177.116	0.0	Experiment_Start_Sub_sub-01_Ses_ses-01_Paradigm_MusicMemoryRecall_CueDur_5.0s	4	44279
+177.116	0.0	Trial_Start_1_Track_Track_1	8	44279
+177.116	1.0	Cue_Audio_Sample_Track_1	1	44279
+182.128	2.002689	Task_Recall_Track_1	5	45532
