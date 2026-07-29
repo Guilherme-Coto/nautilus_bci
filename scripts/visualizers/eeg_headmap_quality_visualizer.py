@@ -81,6 +81,10 @@ class HeadMapCanvas(QtWidgets.QGraphicsView):
         self.draw_head_outline()
         self.draw_electrodes()
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        QtCore.QTimer.singleShot(50, lambda: self.fitInView(self._scene.sceneRect(), QtCore.Qt.KeepAspectRatio))
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.fitInView(self._scene.sceneRect(), QtCore.Qt.KeepAspectRatio)

@@ -9,8 +9,9 @@ Unified GUI application displaying:
   4. 🔴 1-Click Multimodal BIDS Recording Engine
 
 Usage:
-  uv run python multimodal_bci_dashboard.py
+  uv run python visualizers/multimodal_bci_dashboard.py
 """
+
 import sys
 import os
 _parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -20,9 +21,6 @@ _curr_dir = os.path.dirname(__file__)
 if _curr_dir not in sys.path:
     sys.path.insert(0, _curr_dir)
 
-
-import sys
-import os
 import time
 import subprocess
 import numpy as np
@@ -31,15 +29,30 @@ import scipy.signal as signal
 from PySide6 import QtCore, QtWidgets, QtGui
 import pyqtgraph as pg
 
+pg.setConfigOption('background', '#0D1117')
+pg.setConfigOption('foreground', '#ECF0F1')
+pg.setConfigOptions(antialias=True)
+
 try:
     from pylsl import StreamInlet, resolve_streams
     HAS_LSL = True
 except ImportError:
     HAS_LSL = False
 
-
 from recorders.multimodal_bids_recorder import MultimodalBIDSRecorder
 from visualizers.eeg_headmap_quality_visualizer import HeadMapCanvas, ELECTRODE_POSITIONS_1020
+
+
+def resolve_script_path(script_name):
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    cand = os.path.join(base_dir, script_name)
+    if os.path.exists(cand):
+        return cand
+    for sub in ['bridges', 'tasks', 'recorders', 'visualizers', 'analysis', 'utils']:
+        cand = os.path.join(base_dir, sub, script_name)
+        if os.path.exists(cand):
+            return cand
+    return os.path.join(base_dir, script_name)
 
 
 class MultimodalBCIDashboard(QtWidgets.QMainWindow):
@@ -100,18 +113,67 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         palette.setColor(QtGui.QPalette.ButtonText, QtGui.QColor(240, 240, 245))
         self.setPalette(palette)
 
+        self.setStyleSheet("""
+            QMainWindow, QWidget {
+                background-color: #0F1219;
+                color: #F0F0F5;
+            }
+            QGroupBox {
+                font-size: 12px;
+                font-weight: bold;
+                color: #4DEEEA;
+                border: 1px solid #2C354A;
+                border-radius: 8px;
+                margin-top: 6px;
+                padding: 10px;
+            }
+            QTabWidget::pane {
+                border: 1px solid #2C354A;
+                background-color: #151924;
+            }
+            QTabBar::tab {
+                background-color: #232D41;
+                color: #A0A5B5;
+                padding: 8px 18px;
+                font-weight: bold;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+            }
+            QTabBar::tab:selected {
+                background-color: #00ADB5;
+                color: #FFFFFF;
+            }
+            QTableWidget {
+                background-color: #191E2A;
+                color: #F0F0F5;
+                gridline-color: #2C354A;
+                border: 1px solid #2C354A;
+                border-radius: 6px;
+            }
+            QHeaderView::section {
+                background-color: #232D41;
+                color: #4DEEEA;
+                font-weight: bold;
+                padding: 4px;
+                border: 1px solid #2C354A;
+            }
+            QLineEdit {
+                background-color: #191E2A;
+                color: #FFFFFF;
+                border: 1px solid #2C354A;
+                border-radius: 4px;
+                padding: 4px;
+            }
+        """)
+
         central_widget = QtWidgets.QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QtWidgets.QVBoxLayout(central_widget)
 
-        # ----------------------------------------------------
-        # TOP CONTROL BAR (1-Click Streamers & BIDS Recording)
-        # ----------------------------------------------------
+        # Top Control Bar
         top_bar = QtWidgets.QGroupBox("🎛️ Master Control & Stream Launcher")
-        top_bar.setStyleSheet("QGroupBox { font-weight: bold; color: #ECF0F1; border: 1px solid #34495E; border-radius: 6px; padding: 10px; }")
         top_layout = QtWidgets.QHBoxLayout(top_bar)
 
-        # Metadata inputs
         top_layout.addWidget(QtWidgets.QLabel("Sub:"))
         self.txt_sub = QtWidgets.QLineEdit("01")
         self.txt_sub.setFixedWidth(45)
@@ -122,7 +184,6 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.txt_ses.setFixedWidth(45)
         top_layout.addWidget(self.txt_ses)
 
-        # Streamer Launch Buttons
         self.btn_streamer = QtWidgets.QPushButton("▶ Launch EEG Streamer")
         self.btn_streamer.setStyleSheet("background-color: #2980B9; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
         self.btn_streamer.clicked.connect(self.toggle_eeg_streamer)
@@ -133,13 +194,11 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.btn_watch_bridge.clicked.connect(self.toggle_watch_bridge)
         top_layout.addWidget(self.btn_watch_bridge)
 
-        # BIDS Recording Toggle Button
         self.btn_record = QtWidgets.QPushButton("🔴 Start Multimodal BIDS Recording")
         self.btn_record.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 16px; border-radius: 4px;")
         self.btn_record.clicked.connect(self.toggle_bids_recording)
         top_layout.addWidget(self.btn_record)
 
-        # Stream Status Badges
         self.lbl_status_eeg = QtWidgets.QLabel("EEG: 🔴 Offline")
         self.lbl_status_eeg.setStyleSheet("color: #E74C3C; font-weight: bold;")
         top_layout.addWidget(self.lbl_status_eeg)
@@ -150,29 +209,19 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
 
         main_layout.addWidget(top_bar)
 
-        # ----------------------------------------------------
-        # TABBED MULTI-PANEL VIEW
-        # ----------------------------------------------------
+        # Tabs
         self.tabs = QtWidgets.QTabWidget()
-        self.tabs.setStyleSheet("QTabWidget::pane { border: 1px solid #34495E; background: #1E222B; } QTabBar::tab { background: #2C3E50; color: #ECF0F1; padding: 8px 16px; font-weight: bold; } QTabBar::tab:selected { background: #2980B9; }")
-
-        # Tab 1: EEG Scalp Goodness & 10-20 Headmap
         self.tab_headmap = self.build_headmap_tab()
         self.tabs.addTab(self.tab_headmap, "🧠 10-20 Headmap & Electrode Quality")
 
-        # Tab 2: Motor Cortex Waves & Brain Rhythms
         self.tab_waves = self.build_waves_tab()
         self.tabs.addTab(self.tab_waves, "⚡ Motor Waves & Brain Rhythms")
 
-        # Tab 3: Smartwatch PPG & 6-DOF IMU Vectors
         self.tab_watch = self.build_watch_tab()
         self.tabs.addTab(self.tab_watch, "⌚ Smartwatch PPG & IMU Vectors")
 
         main_layout.addWidget(self.tabs)
 
-    # ----------------------------------------------------
-    # TAB 1 BUILDER: Headmap & Quality Table
-    # ----------------------------------------------------
     def build_headmap_tab(self):
         widget = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(widget)
@@ -185,26 +234,26 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.lbl_headmap_summary.setStyleSheet("font-size: 15px; font-weight: bold; color: #ECF0F1;")
         right_panel.addWidget(self.lbl_headmap_summary)
 
-        # Legend
         legend_layout = QtWidgets.QHBoxLayout()
-        legend_layout.addWidget(self.create_legend_dot("🟢 Good", "#2ECC71"))
-        legend_layout.addWidget(self.create_legend_dot("🟡 Noisy", "#F1C40F"))
-        legend_layout.addWidget(self.create_legend_dot("🟧 Railed", "#E67E22"))
-        legend_layout.addWidget(self.create_legend_dot("🔴 Flatline", "#E74C3C"))
+        legend_layout.addWidget(self.create_legend_dot("GOOD (<80uV)", "#2ECC71"))
+        legend_layout.addWidget(self.create_legend_dot("HIGH NOISE (>80uV)", "#F1C40F"))
+        legend_layout.addWidget(self.create_legend_dot("RAILED (>300uV)", "#E67E22"))
+        legend_layout.addWidget(self.create_legend_dot("FLATLINE (<0.5uV)", "#E74C3C"))
         right_panel.addLayout(legend_layout)
 
-        # Table
         self.table_quality = QtWidgets.QTableWidget(len(self.eeg_ch_names) - 1, 3)
-        self.table_quality.setHorizontalHeaderLabels(["Channel", "Metrics (uV)", "Status"])
-        self.table_quality.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        self.table_quality.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
-        self.table_quality.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
-        self.table_quality.setStyleSheet("background-color: #151821; color: #ECF0F1; gridline-color: #2C3E50; font-size: 11px;")
+        self.table_quality.setHorizontalHeaderLabels(["Electrode", "Live Voltage Metrics", "Status"])
+        self.table_quality.horizontalHeader().setStretchLastSection(True)
 
-        for i, name in enumerate(self.eeg_ch_names[:-1]):
-            self.table_quality.setItem(i, 0, QtWidgets.QTableWidgetItem(name))
-            self.table_quality.setItem(i, 1, QtWidgets.QTableWidgetItem("std: 0.0 | p-p: 0.0"))
-            self.table_quality.setItem(i, 2, QtWidgets.QTableWidgetItem("Checking..."))
+        for i, ch_name in enumerate(self.eeg_ch_names[:-1]):
+            item_name = QtWidgets.QTableWidgetItem(ch_name)
+            item_val = QtWidgets.QTableWidgetItem("std: 0.0uV | p-p: 0.0uV")
+            item_status = QtWidgets.QTableWidgetItem("FLATLINE")
+            item_status.setForeground(QtGui.QColor("#E74C3C"))
+
+            self.table_quality.setItem(i, 0, item_name)
+            self.table_quality.setItem(i, 1, item_val)
+            self.table_quality.setItem(i, 2, item_status)
 
         right_panel.addWidget(self.table_quality)
         layout.addLayout(right_panel, stretch=2)
@@ -215,14 +264,10 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         lbl.setStyleSheet(f"background-color: {color_hex}; color: #000; font-weight: bold; border-radius: 4px; padding: 4px;")
         return lbl
 
-    # ----------------------------------------------------
-    # TAB 2 BUILDER: Waves & Rhythm Meters
-    # ----------------------------------------------------
     def build_waves_tab(self):
         widget = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(widget)
 
-        # Scope Plot
         self.glw_waves = pg.GraphicsLayoutWidget()
         self.glw_waves.setBackground('#0D1117')
         layout.addWidget(self.glw_waves, stretch=3)
@@ -241,7 +286,6 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
             c = self.plot_waves.plot(pen=pg.mkPen(color=color, width=2.0), name=name)
             self.wave_curves.append(c)
 
-        # Right Panel: Rhythm Bars
         right_panel = QtWidgets.QVBoxLayout()
         right_panel.setSpacing(10)
         right_panel.addWidget(QtWidgets.QLabel("<b>Live Brain Rhythm Power</b>"))
@@ -265,16 +309,11 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         layout.addLayout(right_panel, stretch=1)
         return widget
 
-    # ----------------------------------------------------
-    # TAB 3 BUILDER: Smartwatch PPG & IMU Vectors
-    # ----------------------------------------------------
     def build_watch_tab(self):
         widget = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(widget)
 
-        # Top Section: Heart Rate Gauge / Display
         hr_box = QtWidgets.QGroupBox("🫀 Live Smartwatch Heart Rate (PPG)")
-        hr_box.setStyleSheet("QGroupBox { font-weight: bold; color: #ECF0F1; border: 1px solid #34495E; }")
         hr_layout = QtWidgets.QHBoxLayout(hr_box)
 
         self.lbl_hr_val = QtWidgets.QLabel("-- BPM")
@@ -286,16 +325,13 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         hr_layout.addWidget(self.lbl_hr_status)
         layout.addWidget(hr_box)
 
-        # Bottom Section: 6-DOF IMU Waveforms
         imu_box = QtWidgets.QGroupBox("⌚ 6-DOF IMU Motion Vectors (Accelerometer & Gyroscope)")
-        imu_box.setStyleSheet("QGroupBox { font-weight: bold; color: #ECF0F1; border: 1px solid #34495E; }")
         imu_layout = QtWidgets.QVBoxLayout(imu_box)
 
         self.glw_imu = pg.GraphicsLayoutWidget()
         self.glw_imu.setBackground('#0D1117')
         imu_layout.addWidget(self.glw_imu)
 
-        # Plot A: Accel XYZ
         self.plot_accel = self.glw_imu.addPlot(row=0, col=0, title="3-Axis Accelerometer (m/s²)")
         self.plot_accel.showGrid(x=True, y=True, alpha=0.3)
         self.t_vec_imu = np.linspace(-3.0, 0, self.buf_samples_imu)
@@ -304,7 +340,6 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.curve_ay = self.plot_accel.plot(pen=pg.mkPen('#2ECC71', width=2), name="Accel Y")
         self.curve_az = self.plot_accel.plot(pen=pg.mkPen('#3498DB', width=2), name="Accel Z")
 
-        # Plot B: Total Motion Magnitude
         self.plot_mag = self.glw_imu.addPlot(row=0, col=1, title="Total Motion Magnitude |A|")
         self.plot_mag.showGrid(x=True, y=True, alpha=0.3)
         self.curve_mag = self.plot_mag.plot(pen=pg.mkPen('#F1C40F', width=2), name="Magnitude")
@@ -312,17 +347,63 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         layout.addWidget(imu_box)
         return widget
 
-    # ----------------------------------------------------
-    # LSL DISCOVERY & POLLING LOGIC
-    # ----------------------------------------------------
+    def toggle_eeg_streamer(self):
+        if self.streamer_process is None:
+            script_path = resolve_script_path("gds_to_lsl.py")
+            self.streamer_process = subprocess.Popen([sys.executable, script_path, "--non-interactive"])
+            self.btn_streamer.setText("⏹ Stop Hardware EEG Streamer")
+            self.btn_streamer.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+        else:
+            self.streamer_process.terminate()
+            self.streamer_process = None
+            self.btn_streamer.setText("▶ Launch Hardware EEG Streamer")
+            self.btn_streamer.setStyleSheet("background-color: #2980B9; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+
+    def toggle_watch_bridge(self):
+        if self.watch_bridge_process is None:
+            script_path = resolve_script_path("smartwatch_lsl_bridge.py")
+            self.watch_bridge_process = subprocess.Popen([sys.executable, script_path, "--mode", "udp", "--port", "5005"])
+            self.btn_watch_bridge.setText("⏹ Stop Watch Bridge")
+            self.btn_watch_bridge.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+        else:
+            self.watch_bridge_process.terminate()
+            self.watch_bridge_process = None
+            self.btn_watch_bridge.setText("⌚ Launch Watch Bridge")
+            self.btn_watch_bridge.setStyleSheet("background-color: #8E44AD; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+
+    def toggle_bids_recording(self):
+        if self.recorder is None or not self.recorder.is_recording:
+            try:
+                sub = self.txt_sub.text().strip()
+                ses = self.txt_ses.text().strip()
+                outdir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "bids_dataset_multimodal"))
+                self.recorder = MultimodalBIDSRecorder(bids_root=outdir)
+                connected = self.recorder.discover_and_connect_streams(timeout=3.0)
+                if not connected:
+                    raise RuntimeError("No active LSL streams discovered.")
+                self.recorder.start_recording()
+                self.btn_record.setText("⏹ Stop & Export Multimodal BIDS")
+                self.btn_record.setStyleSheet("background-color: #D63031; color: white; font-weight: bold; padding: 6px 16px; border-radius: 4px;")
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Recording Error", f"Could not start recording:\n{e}")
+                self.recorder = None
+        else:
+            sub = self.txt_sub.text().strip()
+            ses = self.txt_ses.text().strip()
+            try:
+                self.recorder.stop_and_export_bids(subject_id=sub, session_id=ses)
+                QtWidgets.QMessageBox.information(self, "Recording Saved", "Multimodal BIDS dataset saved successfully!")
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Export Error", f"Error saving BIDS dataset:\n{e}")
+            self.recorder = None
+            self.btn_record.setText("🔴 Start Multimodal BIDS Recording")
+            self.btn_record.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 16px; border-radius: 4px;")
+
     def discover_lsl_streams(self):
         if not HAS_LSL:
             return
 
         streams = resolve_streams(wait_time=0.2)
-        found_eeg = False
-        found_watch = False
-
         for s in streams:
             stype = s.type().upper()
             sname = s.name()
@@ -330,21 +411,18 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
             if (stype == 'EEG' or 'gNautilus' in sname) and self.eeg_inlet is None:
                 try:
                     self.eeg_inlet = StreamInlet(s, max_buflen=360)
-                    found_eeg = True
                 except Exception:
                     pass
 
             if (stype == 'IMU' or 'Smartwatch_IMU' in sname) and self.imu_inlet is None:
                 try:
                     self.imu_inlet = StreamInlet(s, max_buflen=360)
-                    found_watch = True
                 except Exception:
                     pass
 
             if (stype == 'PPG' or 'Smartwatch_PPG' in sname) and self.ppg_inlet is None:
                 try:
                     self.ppg_inlet = StreamInlet(s, max_buflen=360)
-                    found_watch = True
                 except Exception:
                     pass
 
@@ -432,7 +510,9 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
             channel_stds[name] = std_val
             channel_maxs[name] = ptp_val
 
-            self.table_quality.item(i, 1).setText(f"std:{std_val:.1f} | p-p:{ptp_val:.1f}")
+            item_val = self.table_quality.item(i, 1)
+            if item_val:
+                item_val.setText(f"std:{std_val:.1f} | p-p:{ptp_val:.1f}")
 
             if std_val < 0.5 or ptp_val < 0.5:
                 item = QtWidgets.QTableWidgetItem("FLATLINE")
@@ -472,7 +552,6 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
 
         self.plot_waves.setYRange(-spacing * 0.8, spacing * 4.8)
 
-        # FFT Power
         if len(filt) >= 64:
             fft_vals = np.abs(np.fft.rfft(filt, axis=0))
             freqs = np.fft.rfftfreq(len(filt), 1.0 / self.fs_eeg)
@@ -497,78 +576,16 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.curve_az.setData(self.t_vec_imu, az)
         self.curve_mag.setData(self.t_vec_imu, mag)
 
-def resolve_script_path(script_name):
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    cand = os.path.join(base_dir, script_name)
-    if os.path.exists(cand):
-        return cand
-    for sub in ['bridges', 'tasks', 'recorders', 'visualizers', 'analysis', 'utils']:
-        cand = os.path.join(base_dir, sub, script_name)
-        if os.path.exists(cand):
-            return cand
-    return os.path.join(base_dir, script_name)
-
-
-class MultimodalBCIDashboard(QtWidgets.QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Multimodal BCI Master Dashboard (EEG + Smartwatch PPG/IMU + BIDS)")
-        self.resize(1300, 850)
-
-        # Process & Recording handles
-        self.streamer_process = None
-        self.watch_bridge_process = None
-        self.recorder = None
-
-    def toggle_eeg_streamer(self):
-        if self.streamer_process is None:
-            script_path = resolve_script_path("gds_to_lsl.py")
-            self.streamer_process = subprocess.Popen([sys.executable, script_path, "--non-interactive"])
-            self.btn_streamer.setText("⏹ Stop Hardware EEG Streamer")
-            self.btn_streamer.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
-        else:
+    def closeEvent(self, event):
+        if self.streamer_process:
             self.streamer_process.terminate()
-            self.streamer_process = None
-            self.btn_streamer.setText("▶ Launch Hardware EEG Streamer")
-            self.btn_streamer.setStyleSheet("background-color: #2980B9; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
-
-    def toggle_watch_bridge(self):
-        if self.watch_bridge_process is None:
-            script_path = resolve_script_path("smartwatch_lsl_bridge.py")
-            self.watch_bridge_process = subprocess.Popen([sys.executable, script_path, "--mode", "udp", "--port", "5005"])
-            self.btn_watch_bridge.setText("⏹ Stop Watch Bridge")
-            self.btn_watch_bridge.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
-        else:
+        if self.watch_bridge_process:
             self.watch_bridge_process.terminate()
-            self.watch_bridge_process = None
-            self.btn_watch_bridge.setText("⌚ Launch Watch Bridge")
-            self.btn_watch_bridge.setStyleSheet("background-color: #8E44AD; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
-
-    def toggle_bids_recording(self):
-        if self.recorder is None or not self.recorder.is_recording:
-            try:
-                self.recorder = MultimodalBIDSRecorder(bids_root="bids_dataset_multimodal")
-                connected = self.recorder.discover_and_connect_streams(timeout=2.0)
-                if not connected:
-                    QtWidgets.QMessageBox.warning(self, "No Streams", "No LSL streams found! Start your streamers first.")
-                    return
-                self.recorder.start_recording()
-                self.btn_record.setText("⏹ Stop & Export Multimodal BIDS")
-                self.btn_record.setStyleSheet("background-color: #D63031; color: white; font-weight: bold; padding: 6px 16px; border-radius: 4px;")
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self, "Error", f"Could not start recorder: {e}")
-        else:
-            sub = self.txt_sub.text().strip()
-            ses = self.txt_ses.text().strip()
-            self.recorder.stop_and_export_bids(subject_id=sub, session_id=ses)
-            self.btn_record.setText("🔴 Start Multimodal BIDS Recording")
-            self.btn_record.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 16px; border-radius: 4px;")
-            QtWidgets.QMessageBox.information(self, "BIDS Exported", "Successfully exported Multimodal BIDS dataset!")
-            self.recorder = None
+        event.accept()
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    win = MultimodalBCIDashboard()
-    win.show()
+    window = MultimodalBCIDashboard()
+    window.show()
     sys.exit(app.exec())
