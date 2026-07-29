@@ -23,10 +23,15 @@ try:
 except ImportError:
     HAS_LSL = False
 
-sys.path.append(os.path.dirname(__file__))
-from multimodal_bids_recorder import MultimodalBIDSRecorder
-from left_right_task import LeftRightTaskApp
-from music_memory_task import MusicMemoryTaskApp
+base_dir = os.path.dirname(__file__)
+for sub in ['recorders', 'tasks', 'bridges', 'visualizers', 'analysis', 'utils']:
+    p = os.path.join(base_dir, sub)
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from recorders.multimodal_bids_recorder import MultimodalBIDSRecorder
+from tasks.left_right_task import LeftRightTaskApp
+from tasks.music_memory_task import MusicMemoryTaskApp
 
 
 class MiniEEGVisualizerWidget(QWidget):
@@ -248,6 +253,7 @@ class BCISuiteControlCenter(QMainWindow):
         self.task_window = None
         self.music_memory_window = None
         self.calibrator_window = None
+        self.video_task_window = None
 
         self.init_ui()
 
@@ -436,6 +442,21 @@ class BCISuiteControlCenter(QMainWindow):
         layout_calib.addWidget(self.btn_launch_calibrator)
         task_layout.addWidget(card_calib)
 
+        # Card D: Video Dataset Task
+        card_video = QGroupBox("📹 Video Dataset Paradigm")
+        card_video.setStyleSheet("QGroupBox { font-size: 11px; font-weight: bold; color: #A0A5B5; border: 1px solid #2C3545; border-radius: 6px; padding: 8px; }")
+        layout_video = QVBoxLayout(card_video)
+        lbl_video = QLabel("3s Video Stimulus & Audio Toggle\n(1.5s Rest Interval Paradigm)")
+        lbl_video.setStyleSheet("color: #4DEEEA; font-size: 10px;")
+        layout_video.addWidget(lbl_video)
+
+        self.btn_launch_video_task = QPushButton("📹 Launch Video Dataset Task")
+        self.btn_launch_video_task.setFont(QFont("Arial", 10, QFont.Bold))
+        self.btn_launch_video_task.setStyleSheet("background-color: #00B894; color: white; padding: 8px 12px; border-radius: 5px;")
+        self.btn_launch_video_task.clicked.connect(self.launch_video_task_gui)
+        layout_video.addWidget(self.btn_launch_video_task)
+        task_layout.addWidget(card_video)
+
         main_layout.addWidget(task_box)
 
         # Console Log Box
@@ -547,10 +568,10 @@ class BCISuiteControlCenter(QMainWindow):
     def launch_task_gui(self):
         if self.task_window is None or not self.task_window.isVisible():
             self.log("Launching Audio-Visual 4-Direction Task Presentation Window...")
-            import visual_motor_imagery_task
+            from tasks import left_right_task as visual_motor_imagery_task
             import importlib
             importlib.reload(visual_motor_imagery_task)
-            self.task_window = visual_motor_imagery_task.LeftRightTaskApp()
+            self.task_window = LeftRightTaskApp()
             self.task_window.sub_input.setText(f"sub-{self.txt_sub.text().strip()}")
             self.task_window.ses_input.setText(f"ses-{self.txt_ses.text().strip()}")
             self.task_window.movement_axis_combo.setCurrentIndex(0)
@@ -561,7 +582,7 @@ class BCISuiteControlCenter(QMainWindow):
     def launch_music_memory_gui(self):
         if self.music_memory_window is None or not self.music_memory_window.isVisible():
             self.log("Launching 6-Track Music Memory Recall Presentation Window...")
-            import music_memory_task
+            from tasks import music_memory_task
             import importlib
             importlib.reload(music_memory_task)
             self.music_memory_window = music_memory_task.MusicMemoryTaskApp()
@@ -574,13 +595,26 @@ class BCISuiteControlCenter(QMainWindow):
     def launch_calibrator_gui(self):
         if self.calibrator_window is None or not self.calibrator_window.isVisible():
             self.log("Launching Companion Music Offset & Tempo Calibrator Studio...")
-            import music_offset_calibrator
+            from tasks import music_offset_calibrator
             import importlib
             importlib.reload(music_offset_calibrator)
             self.calibrator_window = music_offset_calibrator.MusicOffsetCalibratorApp()
             self.calibrator_window.show()
         else:
             self.calibrator_window.activateWindow()
+
+    def launch_video_task_gui(self):
+        if self.video_task_window is None or not self.video_task_window.isVisible():
+            self.log("Launching Video Stimulus Dataset Task Presentation Window...")
+            from tasks import video_dataset_task
+            import importlib
+            importlib.reload(video_dataset_task)
+            self.video_task_window = video_dataset_task.VideoDatasetTaskApp()
+            self.video_task_window.sub_input.setText(f"sub-{self.txt_sub.text().strip()}")
+            self.video_task_window.ses_input.setText(f"ses-{self.txt_ses.text().strip()}")
+            self.video_task_window.show()
+        else:
+            self.video_task_window.activateWindow()
 
     def update_status(self):
         try:
