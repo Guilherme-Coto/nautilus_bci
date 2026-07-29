@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QLineEdit, QFormLayout, QGroupBox,
     QRadioButton, QButtonGroup, QTextEdit, QMessageBox, QFrame,
-    QProgressBar, QSplitter
+    QProgressBar, QSplitter, QFileDialog
 )
 from PySide6.QtGui import QFont, QColor, QPalette
 
@@ -32,6 +32,7 @@ for sub in ['recorders', 'tasks', 'bridges', 'visualizers', 'analysis', 'utils']
 from recorders.multimodal_bids_recorder import MultimodalBIDSRecorder
 from tasks.left_right_task import LeftRightTaskApp
 from tasks.music_memory_task import MusicMemoryTaskApp
+from utils.bids_utils import get_formatted_next_session
 
 
 class MiniEEGVisualizerWidget(QWidget):
@@ -243,11 +244,12 @@ class MiniEEGVisualizerWidget(QWidget):
 
 
 class BCISuiteControlCenter(QMainWindow):
-    def __init__(self):
+    def __init__(self, initial_bids_root="bids_dataset"):
         super().__init__()
         self.setWindowTitle("BCI Motor Imagery & BIDS Studio - Master Control Center")
         self.resize(920, 800)
 
+        self.initial_bids_root = initial_bids_root
         self.streamer_process = None
         self.recorder = None
         self.task_window = None
@@ -362,8 +364,12 @@ class BCISuiteControlCenter(QMainWindow):
         self.txt_ses.setFixedWidth(80)
         self.txt_ses.setStyleSheet("background: #191E2A; color: white; padding: 5px; border-radius: 4px;")
 
-        self.txt_outdir = QLineEdit("bids_dataset")
+        self.txt_outdir = QLineEdit(self.initial_bids_root)
         self.txt_outdir.setStyleSheet("background: #191E2A; color: white; padding: 5px; border-radius: 4px;")
+
+        self.btn_browse_bids = QPushButton("Browse...")
+        self.btn_browse_bids.setStyleSheet("background-color: #2C354A; color: white; padding: 5px 10px; border-radius: 4px;")
+        self.btn_browse_bids.clicked.connect(self.browse_bids_folder)
 
         form_layout.addWidget(QLabel("Subject ID: sub-"))
         form_layout.addWidget(self.txt_sub)
@@ -371,7 +377,13 @@ class BCISuiteControlCenter(QMainWindow):
         form_layout.addWidget(self.txt_ses)
         form_layout.addWidget(QLabel("BIDS Folder:"))
         form_layout.addWidget(self.txt_outdir)
+        form_layout.addWidget(self.btn_browse_bids)
         rec_layout.addLayout(form_layout)
+
+        # Auto-update session based on existing sessions for subject/bids root
+        self.txt_sub.textChanged.connect(self.auto_update_session)
+        self.txt_outdir.textChanged.connect(self.auto_update_session)
+        self.auto_update_session()
 
         rec_ctrl_row = QHBoxLayout()
         self.btn_toggle_recording = QPushButton("🔴 Start BIDS Recording")
@@ -558,6 +570,7 @@ class BCISuiteControlCenter(QMainWindow):
                 self.lbl_rec_status.setText("RECORDER: [STANDBY]")
                 self.lbl_rec_status.setStyleSheet("color: #A0A5B5;")
                 QMessageBox.information(self, "BIDS Export Complete", f"Successfully saved Multimodal BIDS dataset to:\n{out_path}")
+                self.auto_update_session()
             except Exception as e:
                 self.log(f"Error exporting BIDS: {e}")
                 QMessageBox.critical(self, "BIDS Export Error", f"Failed to export BIDS dataset:\n{e}")
@@ -567,6 +580,15 @@ class BCISuiteControlCenter(QMainWindow):
             self.btn_toggle_recording.setStyleSheet("background-color: #E17055; color: white; padding: 8px 16px; border-radius: 5px;")
             self.lbl_rec_status.setText("RECORDER: [STANDBY]")
             self.lbl_rec_status.setStyleSheet("color: #A0A5B5;")
+
+    def auto_update_session(self):
+        sub = self.txt_sub.text().strip()
+        outdir = self.txt_outdir.text().strip()
+        curr_ses = self.txt_ses.text().strip()
+        next_ses = get_formatted_next_session(outdir, sub, curr_ses)
+        self.txt_ses.blockSignals(True)
+        self.txt_ses.setText(next_ses)
+        self.txt_ses.blockSignals(False)
 
     def launch_task_gui(self):
         if self.task_window is None or not self.task_window.isVisible():
@@ -628,6 +650,11 @@ class BCISuiteControlCenter(QMainWindow):
         except Exception:
             pass
 
+    def browse_bids_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select BIDS Target Dataset Directory", self.txt_outdir.text().strip())
+        if folder:
+            self.txt_outdir.setText(folder)
+
     def closeEvent(self, event):
         if self.recorder and self.recorder.is_recording:
             self.recorder.is_recording = False
@@ -636,9 +663,14 @@ class BCISuiteControlCenter(QMainWindow):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="BCI Master Control Center")
+    parser.add_argument("--bids-root", "--dataset-folder", type=str, default="bids_dataset", help="Target BIDS dataset output directory")
+    args, unknown = parser.parse_known_args()
+
     try:
         app = QApplication(sys.argv)
-        window = BCISuiteControlCenter()
+        window = BCISuiteControlCenter(initial_bids_root=args.bids_root)
         window.show()
         sys.exit(app.exec())
     except KeyboardInterrupt:

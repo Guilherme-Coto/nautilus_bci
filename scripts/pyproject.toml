@@ -19,6 +19,8 @@ dependencies = [
     "pybv>=0.8.1",
     "pandas>=3.0.5",
     "scikit-learn>=1.9.0",
+    "pyriemann>=0.12",
+    "torch>=2.13.0",
 ]
 
 [tool.uv.sources]

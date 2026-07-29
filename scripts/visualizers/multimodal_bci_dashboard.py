@@ -56,11 +56,12 @@ def resolve_script_path(script_name):
 
 
 class MultimodalBCIDashboard(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, initial_bids_root="bids_dataset_multimodal"):
         super().__init__()
         self.setWindowTitle("Multimodal BCI Master Dashboard (EEG + Smartwatch PPG/IMU + BIDS)")
         self.resize(1300, 850)
 
+        self.initial_bids_root = initial_bids_root
         # Process & Recording handles
         self.streamer_process = None
         self.watch_bridge_process = None
@@ -183,6 +184,16 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.txt_ses = QtWidgets.QLineEdit("01")
         self.txt_ses.setFixedWidth(45)
         top_layout.addWidget(self.txt_ses)
+
+        top_layout.addWidget(QtWidgets.QLabel("Folder:"))
+        self.txt_outdir = QtWidgets.QLineEdit(self.initial_bids_root)
+        self.txt_outdir.setMinimumWidth(150)
+        top_layout.addWidget(self.txt_outdir)
+
+        self.btn_browse_bids = QtWidgets.QPushButton("Browse...")
+        self.btn_browse_bids.setStyleSheet("background-color: #2C354A; color: white; padding: 4px 8px; border-radius: 4px;")
+        self.btn_browse_bids.clicked.connect(self.browse_bids_folder)
+        top_layout.addWidget(self.btn_browse_bids)
 
         self.btn_streamer = QtWidgets.QPushButton("▶ Launch EEG Streamer")
         self.btn_streamer.setStyleSheet("background-color: #2980B9; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
@@ -371,12 +382,17 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
             self.btn_watch_bridge.setText("⌚ Launch Watch Bridge")
             self.btn_watch_bridge.setStyleSheet("background-color: #8E44AD; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
 
+    def browse_bids_folder(self):
+        folder = QtWidgets.QFileDialog.getExistingDirectory(self, "Select BIDS Target Dataset Directory", self.txt_outdir.text().strip())
+        if folder:
+            self.txt_outdir.setText(folder)
+
     def toggle_bids_recording(self):
         if self.recorder is None or not self.recorder.is_recording:
             try:
                 sub = self.txt_sub.text().strip()
                 ses = self.txt_ses.text().strip()
-                outdir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "bids_dataset_multimodal"))
+                outdir = self.txt_outdir.text().strip()
                 self.recorder = MultimodalBIDSRecorder(bids_root=outdir)
                 connected = self.recorder.discover_and_connect_streams(timeout=3.0)
                 if not connected:
@@ -392,7 +408,8 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
             ses = self.txt_ses.text().strip()
             try:
                 self.recorder.stop_and_export_bids(subject_id=sub, session_id=ses)
-                QtWidgets.QMessageBox.information(self, "Recording Saved", "Multimodal BIDS dataset saved successfully!")
+                out_path = self.txt_outdir.text().strip()
+                QtWidgets.QMessageBox.information(self, "Recording Saved", f"Multimodal BIDS dataset saved successfully to:\n{out_path}")
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Export Error", f"Error saving BIDS dataset:\n{e}")
             self.recorder = None
@@ -585,7 +602,12 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
 
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description="Multimodal BCI Master Dashboard")
+    parser.add_argument("--bids-root", "--dataset-folder", type=str, default="bids_dataset_multimodal", help="Target BIDS dataset output directory")
+    args, unknown = parser.parse_known_args()
+
     app = QtWidgets.QApplication(sys.argv)
-    window = MultimodalBCIDashboard()
+    window = MultimodalBCIDashboard(initial_bids_root=args.bids_root)
     window.show()
     sys.exit(app.exec())

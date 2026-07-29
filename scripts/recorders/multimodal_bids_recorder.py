@@ -185,12 +185,18 @@ class MultimodalBIDSRecorder:
                 timestamps = np.array(self.timestamp_buffers[sname])
 
                 if len(data) > 0:
-                    df = pd.DataFrame(data)
-                    df.insert(0, 'timestamp_sec', timestamps)
-                    
-                    category = 'motion' if item['type'] == 'IMU' else 'physio'
+                    if item['type'] == 'IMU' or 'imu' in sname.lower():
+                        category = 'motion'
+                    elif item['type'] == 'PPG' or 'ppg' in sname.lower():
+                        category = 'ppg'
+                    else:
+                        category = item['type'].lower() if item['type'] else 'ppg'
+
                     out_folder = os.path.join(bids_sub_dir, category)
                     os.makedirs(out_folder, exist_ok=True)
+
+                    df = pd.DataFrame(data)
+                    df.insert(0, 'timestamp_sec', timestamps)
 
                     tsv_filename = f"sub-{sub_clean}_ses-{ses_clean}_task-{task_name}_{category}.tsv"
                     tsv_path = os.path.join(out_folder, tsv_filename)

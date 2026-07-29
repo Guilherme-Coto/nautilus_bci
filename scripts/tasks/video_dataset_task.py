@@ -38,6 +38,8 @@ try:
 except ImportError:
     HAS_LSL = False
 
+from recorders.bids_recorder_widget import BIDSRecorderControlWidget
+
 
 def normalize_wav_file(input_path, output_path, target_peak_dB=-1.0):
     """Normalize a PCM WAV audio file to target peak dB (-1.0 dBFS by default)."""
@@ -212,17 +214,19 @@ class VideoDatasetTaskApp(QMainWindow):
         subtitle.setStyleSheet("color: #A0A5B5;")
         layout.addWidget(subtitle)
 
+        # Integrated BIDS Recording & Participant Metadata Box
+        self.recorder_widget = BIDSRecorderControlWidget(default_task="video", default_bids_root="bids_dataset")
+        layout.addWidget(self.recorder_widget)
+
+        self.sub_input = self.recorder_widget.txt_sub
+        self.ses_input = self.recorder_widget.txt_ses
+
         # Form Group
         form_group = QGroupBox("Experiment & Paradigm Settings")
         form_group.setFont(QFont("Arial", 11, QFont.Bold))
         form_group.setStyleSheet("QGroupBox { color: #4DEEEA; border: 1px solid #2C354A; border-radius: 8px; margin-top: 5px; padding: 12px; }")
         form_layout = QFormLayout(form_group)
         form_layout.setSpacing(10)
-
-        self.sub_input = QLineEdit("sub-01")
-        self.ses_input = QLineEdit("ses-01")
-        form_layout.addRow("Subject ID:", self.sub_input)
-        form_layout.addRow("Session ID:", self.ses_input)
 
         # Video directory selector
         dir_layout = QHBoxLayout()
@@ -319,8 +323,16 @@ class VideoDatasetTaskApp(QMainWindow):
         candidates = [
             os.path.join(self.audio_dir, f"{base_name}.wav"),
             os.path.join(self.audio_dir, f"{base_name}.mp3"),
+            os.path.join(self.audio_dir, f"{base_name}.m4a"),
+            os.path.join(self.audio_dir, f"{base_name}.aac"),
+            os.path.join(self.audio_dir, f"{base_name}.flac"),
+            os.path.join(self.audio_dir, f"{base_name}.ogg"),
             os.path.join(os.path.dirname(video_path), f"{base_name}.wav"),
-            os.path.join(os.path.dirname(video_path), f"{base_name}.mp3")
+            os.path.join(os.path.dirname(video_path), f"{base_name}.mp3"),
+            os.path.join(os.path.dirname(video_path), f"{base_name}.m4a"),
+            os.path.join(os.path.dirname(video_path), f"{base_name}.aac"),
+            os.path.join(os.path.dirname(video_path), f"{base_name}.flac"),
+            os.path.join(os.path.dirname(video_path), f"{base_name}.ogg")
         ]
 
         for cand in candidates:
@@ -345,7 +357,7 @@ class VideoDatasetTaskApp(QMainWindow):
             paired_audio_count = sum(1 for v in self.video_files if self.find_matching_audio(v) is not None)
             msg = f"✅ Found {len(self.video_files)} video file(s)."
             if paired_audio_count > 0:
-                msg += f" 🎵 {paired_audio_count} paired WAV audio track(s) detected in videos/audio/."
+                msg += f" 🎵 {paired_audio_count} paired audio track(s) detected in videos/audio/."
             else:
                 msg += f" (Optional audio tracks can be placed in: {self.audio_dir})"
             
@@ -585,8 +597,28 @@ class VideoDatasetTaskApp(QMainWindow):
         event.accept()
 
 
-if __name__ == '__main__':
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Video Stimulus Dataset Task")
+    parser.add_argument("--sub", type=str, default="01", help="Subject ID")
+    parser.add_argument("--ses", type=str, default="01", help="Session ID")
+    parser.add_argument("--bids-root", "--dataset-folder", type=str, default="bids_dataset", help="Target BIDS dataset output directory")
+    args, unknown = parser.parse_known_args()
+
     app = QApplication(sys.argv)
     window = VideoDatasetTaskApp()
+
+    if hasattr(window, 'recorder_widget') and window.recorder_widget:
+        if args.sub:
+            window.recorder_widget.txt_sub.setText(args.sub.replace('sub-', ''))
+        if args.ses:
+            window.recorder_widget.txt_ses.setText(args.ses.replace('ses-', ''))
+        if args.bids_root:
+            window.recorder_widget.txt_outdir.setText(args.bids_root)
+
     window.show()
     sys.exit(app.exec())
+
+
+if __name__ == '__main__':
+    main()

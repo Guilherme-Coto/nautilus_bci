@@ -24,6 +24,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QFont, QColor, QPalette
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
+from utils.bids_utils import get_formatted_next_session
+
 try:
     from pylsl import StreamInfo, StreamOutlet, local_clock
     HAS_LSL = True
@@ -256,6 +258,10 @@ class MusicMemoryTaskApp(QMainWindow):
 
         self.ses_input = QLineEdit("ses-01")
         self.ses_input.setStyleSheet("background: #191E2A; color: white; padding: 6px; border-radius: 4px;")
+        form.addRow("Session ID:", self.ses_input)
+
+        self.sub_input.textChanged.connect(self.auto_update_session)
+        self.auto_update_session()
         
         self.category_combo = QComboBox()
         self.category_combo.setStyleSheet("background: #191E2A; color: white; padding: 6px; border-radius: 4px;")
@@ -317,6 +323,18 @@ class MusicMemoryTaskApp(QMainWindow):
 
         layout.addLayout(btn_layout)
         return widget
+
+    def auto_update_session(self):
+        sub = self.sub_input.text().strip()
+        curr_ses = self.ses_input.text().strip()
+        # Look in bids_dataset, bids_music, or bids_dataset_multimodal
+        bids_root = "bids_dataset"
+        if not os.path.exists(bids_root) and os.path.exists("bids_music"):
+            bids_root = "bids_music"
+        next_ses = get_formatted_next_session(bids_root, sub, curr_ses)
+        self.ses_input.blockSignals(True)
+        self.ses_input.setText(next_ses)
+        self.ses_input.blockSignals(False)
 
     def populate_track_list(self):
         # Clear existing

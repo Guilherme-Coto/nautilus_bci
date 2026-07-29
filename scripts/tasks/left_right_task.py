@@ -29,6 +29,8 @@ try:
 except ImportError:
     HAS_LSL = False
 
+from recorders.bids_recorder_widget import BIDSRecorderControlWidget
+
 
 def generate_cue_wavs(sound_dir):
     """Generate high-quality PCM WAV sound cues for audio-guided BCI paradigms."""
@@ -212,19 +214,18 @@ class LeftRightTaskApp(QMainWindow):
         subtitle.setStyleSheet("color: #A0A5B5;")
         layout.addWidget(subtitle)
 
+        # Integrated BIDS Recording & Participant Metadata Box
+        self.recorder_widget = BIDSRecorderControlWidget(default_task="leftright", default_bids_root="bids_dataset")
+        layout.addWidget(self.recorder_widget)
+
+        self.sub_input = self.recorder_widget.txt_sub
+        self.ses_input = self.recorder_widget.txt_ses
+
         # Setup Form Box
         config_group = QGroupBox("Paradigm & Audio Configuration")
         config_group.setStyleSheet("QGroupBox { font-size: 13px; font-weight: bold; color: #4DEEEA; border: 1px solid #2C3545; border-radius: 8px; margin-top: 5px; padding-top: 12px; }")
         form = QFormLayout(config_group)
         form.setSpacing(10)
-
-        self.sub_input = QLineEdit("sub-01")
-        self.sub_input.setStyleSheet("background: #191E2A; color: white; padding: 5px; border-radius: 4px;")
-        form.addRow("Subject ID:", self.sub_input)
-
-        self.ses_input = QLineEdit("ses-01")
-        self.ses_input.setStyleSheet("background: #191E2A; color: white; padding: 5px; border-radius: 4px;")
-        form.addRow("Session ID:", self.ses_input)
 
         self.movement_axis_combo = QComboBox()
         self.movement_axis_combo.addItems([
@@ -582,8 +583,24 @@ class LeftRightTaskApp(QMainWindow):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Motor Imagery Task")
+    parser.add_argument("--sub", type=str, default="01", help="Subject ID")
+    parser.add_argument("--ses", type=str, default="01", help="Session ID")
+    parser.add_argument("--bids-root", "--dataset-folder", type=str, default="bids_dataset", help="Target BIDS dataset output directory")
+    args, unknown = parser.parse_known_args()
+
     app = QApplication(sys.argv)
     window = LeftRightTaskApp()
+
+    if hasattr(window, 'recorder_widget') and window.recorder_widget:
+        if args.sub:
+            window.recorder_widget.txt_sub.setText(args.sub.replace('sub-', ''))
+        if args.ses:
+            window.recorder_widget.txt_ses.setText(args.ses.replace('ses-', ''))
+        if args.bids_root:
+            window.recorder_widget.txt_outdir.setText(args.bids_root)
+
     window.show()
     sys.exit(app.exec())
 

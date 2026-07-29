@@ -136,8 +136,9 @@ def run_udp_server(host, port, imu_outlet, ppg_outlet):
             count += 1
             text = data.decode('utf-8', errors='ignore').strip()
             
-            if count % 10 == 1 or count <= 5:
-                print(f"[UDP Packet #{count}] Received from {addr[0]}: {text[:60]}")
+            # Debug output (commented out for silent streaming)
+            # if count % 50 == 1:
+            #     print(f"[UDP Packet #{count}] Received from {addr[0]}: {text[:60]}")
 
             # 1. Try JSON parsing
             if text.startswith('{'):
@@ -221,7 +222,7 @@ def get_local_ip():
         return "127.0.0.1"
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description="Smartwatch PPG & IMU to LSL Bridge")
     parser.add_argument('--mode', choices=['websocket', 'udp'], default='websocket', help="Transport protocol")
     parser.add_argument('--host', default='0.0.0.0', help="Host IP to bind")
@@ -251,3 +252,7 @@ if __name__ == '__main__':
             asyncio.run(main_ws(args.host, args.port, imu_outlet, ppg_outlet))
         except KeyboardInterrupt:
             print("\n[*] WebSocket server stopped.")
+
+
+if __name__ == '__main__':
+    main()
