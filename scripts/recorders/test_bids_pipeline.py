@@ -81,7 +81,7 @@ def main():
     print("=" * 70)
 
     # Step 1: Start Mock EEG Streamer process
-    mock_script = os.path.join(os.path.dirname(__file__), "mock_lsl_streamer.py")
+    mock_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bridges", "mock_lsl_streamer.py"))
     print(f"[*] Launching Mock LSL Streamer: {mock_script}")
     eeg_proc = subprocess.Popen([sys.executable, mock_script])
 

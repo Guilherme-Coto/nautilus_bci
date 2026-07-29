@@ -91,6 +91,15 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.update_timer.start(33)  # ~30 FPS
 
     def init_ui(self):
+        palette = QtGui.QPalette()
+        palette.setColor(QtGui.QPalette.Window, QtGui.QColor(15, 18, 25))
+        palette.setColor(QtGui.QPalette.WindowText, QtGui.QColor(240, 240, 245))
+        palette.setColor(QtGui.QPalette.Base, QtGui.QColor(25, 30, 42))
+        palette.setColor(QtGui.QPalette.Text, QtGui.QColor(240, 240, 245))
+        palette.setColor(QtGui.QPalette.Button, QtGui.QColor(35, 45, 65))
+        palette.setColor(QtGui.QPalette.ButtonText, QtGui.QColor(240, 240, 245))
+        self.setPalette(palette)
+
         central_widget = QtWidgets.QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QtWidgets.QVBoxLayout(central_widget)
@@ -488,12 +497,32 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.curve_az.setData(self.t_vec_imu, az)
         self.curve_mag.setData(self.t_vec_imu, mag)
 
-    # ----------------------------------------------------
-    # STREAM & RECORDING CONTROLLER ACTIONS
-    # ----------------------------------------------------
+def resolve_script_path(script_name):
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    cand = os.path.join(base_dir, script_name)
+    if os.path.exists(cand):
+        return cand
+    for sub in ['bridges', 'tasks', 'recorders', 'visualizers', 'analysis', 'utils']:
+        cand = os.path.join(base_dir, sub, script_name)
+        if os.path.exists(cand):
+            return cand
+    return os.path.join(base_dir, script_name)
+
+
+class MultimodalBCIDashboard(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Multimodal BCI Master Dashboard (EEG + Smartwatch PPG/IMU + BIDS)")
+        self.resize(1300, 850)
+
+        # Process & Recording handles
+        self.streamer_process = None
+        self.watch_bridge_process = None
+        self.recorder = None
+
     def toggle_eeg_streamer(self):
         if self.streamer_process is None:
-            script_path = os.path.join(os.path.dirname(__file__), "gds_to_lsl.py")
+            script_path = resolve_script_path("gds_to_lsl.py")
             self.streamer_process = subprocess.Popen([sys.executable, script_path, "--non-interactive"])
             self.btn_streamer.setText("⏹ Stop Hardware EEG Streamer")
             self.btn_streamer.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
@@ -505,7 +534,7 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
 
     def toggle_watch_bridge(self):
         if self.watch_bridge_process is None:
-            script_path = os.path.join(os.path.dirname(__file__), "smartwatch_lsl_bridge.py")
+            script_path = resolve_script_path("smartwatch_lsl_bridge.py")
             self.watch_bridge_process = subprocess.Popen([sys.executable, script_path, "--mode", "udp", "--port", "5005"])
             self.btn_watch_bridge.setText("⏹ Stop Watch Bridge")
             self.btn_watch_bridge.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")

@@ -70,6 +70,7 @@ class HeadMapCanvas(QtWidgets.QGraphicsView):
         super().__init__()
         self._scene = QtWidgets.QGraphicsScene()
         self.setScene(self._scene)
+        self.setSceneRect(-280, -280, 560, 560)
         self.setRenderHint(QtGui.QPainter.Antialiasing)
         self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(20, 24, 33)))
 
@@ -79,6 +80,10 @@ class HeadMapCanvas(QtWidgets.QGraphicsView):
 
         self.draw_head_outline()
         self.draw_electrodes()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.fitInView(self._scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
 
     def draw_head_outline(self):
         # Draw Head Circle (radius 220 px)

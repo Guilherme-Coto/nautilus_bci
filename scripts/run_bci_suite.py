@@ -473,7 +473,10 @@ class BCISuiteControlCenter(QMainWindow):
     def toggle_streamer(self):
         if self.streamer_process is None:
             script_name = "gds_to_lsl.py" if self.radio_hw.isChecked() else "mock_lsl_streamer.py"
-            script_path = os.path.join(os.path.dirname(__file__), script_name)
+            base_dir = os.path.dirname(__file__)
+            script_path = os.path.join(base_dir, "bridges", script_name)
+            if not os.path.exists(script_path):
+                script_path = os.path.join(base_dir, script_name)
             
             self.log(f"Starting EEG Streamer ({script_name})...")
             args = [sys.executable, script_path]
