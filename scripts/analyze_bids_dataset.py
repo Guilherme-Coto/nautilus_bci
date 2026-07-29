@@ -200,18 +200,21 @@ def analyze_dataset(bids_root="bids_dataset", subject_id="01", session_id="01", 
 
     acc_score = 0.0
     if len(y) >= 4 and len(np.unique(y)) > 1:
+        from sklearn.pipeline import Pipeline
         n_components = min(4, X.shape[1])
         csp = CSP(n_components=n_components, reg=None, log=True, norm_trace=False)
         lda = LinearDiscriminantAnalysis()
+        clf_pipeline = Pipeline([('csp', csp), ('lda', lda)])
 
         n_splits = min(5, min(np.bincount(y - np.min(y))))
         if n_splits >= 2:
             cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
-            X_csp = csp.fit_transform(X, y)
-            scores = cross_val_score(lda, X_csp, y, cv=cv)
+            # Strict leakage-free Cross Validation (CSP fit ONLY on training fold per iteration)
+            scores = cross_val_score(clf_pipeline, X, y, cv=cv)
             acc_score = np.mean(scores) * 100.0
 
             try:
+                csp.fit(X, y)
                 fig = csp.plot_patterns(epochs_eeg.info, ch_type='eeg', show=False)
                 plot3_path = os.path.join(out_dir, "csp_patterns.png")
                 fig.savefig(plot3_path, dpi=150, bbox_inches='tight')

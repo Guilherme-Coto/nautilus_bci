@@ -24,7 +24,7 @@ except ImportError:
     HAS_LSL = False
 
 sys.path.append(os.path.dirname(__file__))
-from bids_recorder import BIDSRecorder
+from multimodal_bids_recorder import MultimodalBIDSRecorder
 from left_right_task import LeftRightTaskApp
 from music_memory_task import MusicMemoryTaskApp
 
@@ -151,7 +151,12 @@ class MiniEEGVisualizerWidget(QWidget):
             try:
                 samples, _ = self.inlet.pull_chunk(max_samples=250)
                 if samples and len(samples) > 0:
-                    new_data = np.array(samples)
+                    new_data = np.array(samples, dtype=np.float64)
+
+                    # Auto-scale Volts to Microvolts if data is in Volts (e.g. max < 0.01 V)
+                    if np.max(np.abs(new_data)) < 0.01:
+                        new_data *= 1e6
+
                     n_new = len(new_data)
                     n_cols = new_data.shape[1]
                     
@@ -193,12 +198,15 @@ class MiniEEGVisualizerWidget(QWidget):
         except Exception:
             pass
 
-        spacing = 40.0
+        # Dynamic gain scaling so small microvolt waves are always clearly visible
+        current_std = np.std(filt_data)
+        spacing = max(20.0, current_std * 3.5)
         offsets = [0, spacing, spacing * 2, spacing * 3]
 
         for i, ch_idx in enumerate(self.ch_indices):
-            y_val = filt_data[:, ch_idx] + offsets[i]
-            self.curves[i].setData(self.t_vector, y_val)
+            if ch_idx < filt_data.shape[1]:
+                y_val = filt_data[:, ch_idx] + offsets[i]
+                self.curves[i].setData(self.t_vector, y_val)
 
         self.plot.setYRange(-spacing * 0.8, spacing * 3.8)
 
@@ -497,28 +505,35 @@ class BCISuiteControlCenter(QMainWindow):
         if self.recorder is None or not self.recorder.is_recording:
             try:
                 outdir = self.txt_outdir.text().strip()
-                self.recorder = BIDSRecorder(bids_root=outdir)
-                self.log("Connecting to LSL EEG and Marker streams...")
-                self.recorder.connect_streams(timeout=3.0)
+                self.recorder = MultimodalBIDSRecorder(bids_root=outdir)
+                self.log("Discovering all LSL streams (EEG, Smartwatch IMU/PPG, Markers)...")
+                connected = self.recorder.discover_and_connect_streams(timeout=3.0)
+                if not connected:
+                    raise RuntimeError("No active LSL streams discovered.")
                 self.recorder.start_recording()
 
-                self.btn_toggle_recording.setText("⏹ Stop & Export BIDS Dataset")
+                self.btn_toggle_recording.setText("⏹ Stop & Export Multimodal BIDS Dataset")
                 self.btn_toggle_recording.setStyleSheet("background-color: #D63031; color: white; padding: 8px 16px; border-radius: 5px;")
-                self.lbl_rec_status.setText("RECORDER: [RECORDING LIVE...]")
+                self.lbl_rec_status.setText("RECORDER: [RECORDING MULTIMODAL...]")
                 self.lbl_rec_status.setStyleSheet("color: #FF7675;")
-                self.log("[RECORDING STARTED] Continuous EEG and Markers are being recorded.")
+                self.log("[RECORDING STARTED] Continuous EEG, Smartwatch PPG/IMU, and Markers are being recorded.")
             except Exception as e:
                 self.log(f"Error starting recorder: {e}")
-                QMessageBox.critical(self, "Recording Error", f"Could not connect to LSL streams:\n{e}\n\nMake sure the EEG Streamer is running!")
+                QMessageBox.critical(self, "Recording Error", f"Could not connect to LSL streams:\n{e}\n\nMake sure LSL streamers are running!")
                 self.recorder = None
         else:
-            self.log("Stopping recording and compiling BIDS dataset...")
+            self.log("Stopping recording and compiling Multimodal BIDS dataset...")
             sub = self.txt_sub.text().strip()
             ses = self.txt_ses.text().strip()
             try:
-                out_path = self.recorder.stop_recording_and_export_bids(subject_id=sub, session_id=ses)
-                self.log(f"[SUCCESS] BIDS Dataset exported to:\n{out_path}")
-                QMessageBox.information(self, "BIDS Export Complete", f"Successfully saved BIDS dataset to:\n{out_path}")
+                self.recorder.stop_and_export_bids(subject_id=sub, session_id=ses)
+                out_path = self.txt_outdir.text().strip()
+                self.log(f"[SUCCESS] Multimodal BIDS Dataset exported to:\n{out_path}")
+                self.btn_toggle_recording.setText("🔴 Start Multimodal BIDS Recording")
+                self.btn_toggle_recording.setStyleSheet("background-color: #E74C3C; color: white; padding: 8px 16px; border-radius: 5px;")
+                self.lbl_rec_status.setText("RECORDER: [STANDBY]")
+                self.lbl_rec_status.setStyleSheet("color: #A0A5B5;")
+                QMessageBox.information(self, "BIDS Export Complete", f"Successfully saved Multimodal BIDS dataset to:\n{out_path}")
             except Exception as e:
                 self.log(f"Error exporting BIDS: {e}")
                 QMessageBox.critical(self, "BIDS Export Error", f"Failed to export BIDS dataset:\n{e}")
