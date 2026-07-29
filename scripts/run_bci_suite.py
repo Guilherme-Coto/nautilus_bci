@@ -454,15 +454,15 @@ class BCISuiteControlCenter(QMainWindow):
         layout_calib.addWidget(self.btn_launch_calibrator)
         task_layout.addWidget(card_calib)
 
-        # Card D: Video Dataset Task
-        card_video = QGroupBox("📹 Video Dataset Paradigm")
-        card_video.setStyleSheet("QGroupBox { font-size: 11px; font-weight: bold; color: #A0A5B5; border: 1px solid #2C3545; border-radius: 6px; padding: 8px; }")
+        # Card D: Video & Image Slideshow Dataset Task
+        card_video = QGroupBox("📹 Video & Image Slideshow Paradigm")
+        card_video.setStyleSheet("QGroupBox { font-size: 11px; font-weight: bold; color: #A0A5B5; border: 1px solid #2C354A; border-radius: 6px; padding: 8px; }")
         layout_video = QVBoxLayout(card_video)
-        lbl_video = QLabel("3s Video Stimulus & Audio Toggle\n(1.5s Rest Interval Paradigm)")
+        lbl_video = QLabel("Video Clips & Static Image Stimuli\n(Audio Sync & Rest Interval)")
         lbl_video.setStyleSheet("color: #4DEEEA; font-size: 10px;")
         layout_video.addWidget(lbl_video)
 
-        self.btn_launch_video_task = QPushButton("📹 Launch Video Dataset Task")
+        self.btn_launch_video_task = QPushButton("🖼️ Launch Video/Image Task")
         self.btn_launch_video_task.setFont(QFont("Arial", 10, QFont.Bold))
         self.btn_launch_video_task.setStyleSheet("background-color: #00B894; color: white; padding: 8px 12px; border-radius: 5px;")
         self.btn_launch_video_task.clicked.connect(self.launch_video_task_gui)

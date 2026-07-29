@@ -26,9 +26,9 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QLineEdit, QFormLayout, QGroupBox,
     QProgressBar, QStackedWidget, QMessageBox, QCheckBox, QFileDialog,
-    QDoubleSpinBox, QSpinBox
+    QDoubleSpinBox, QSpinBox, QComboBox
 )
-from PySide6.QtGui import QFont, QColor, QPalette
+from PySide6.QtGui import QFont, QColor, QPalette, QPixmap
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
 
@@ -202,13 +202,13 @@ class VideoDatasetTaskApp(QMainWindow):
         layout.setContentsMargins(40, 25, 40, 25)
         layout.setSpacing(12)
 
-        title = QLabel("Video Dataset Presentation Task")
+        title = QLabel("Video & Image Slideshow Dataset Presentation Task")
         title.setFont(QFont("Arial", 22, QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet("color: #4DEEEA;")
         layout.addWidget(title)
 
-        subtitle = QLabel("3s Video Stimulus • Audio Toggle & Peak Normalization • 1.5s Rest • LSL Synchronized")
+        subtitle = QLabel("Video & Image Stimuli • Audio Toggle & Peak Normalization • Rest Interval • LSL Synchronized")
         subtitle.setFont(QFont("Arial", 11))
         subtitle.setAlignment(Qt.AlignCenter)
         subtitle.setStyleSheet("color: #A0A5B5;")
@@ -228,7 +228,16 @@ class VideoDatasetTaskApp(QMainWindow):
         form_layout = QFormLayout(form_group)
         form_layout.setSpacing(10)
 
-        # Video directory selector
+        # Media Type Mode Selector (Videos, Static Images / Slideshow, or All)
+        self.cmb_media_mode = QComboBox()
+        self.cmb_media_mode.addItem("🌐 All Media (Videos + Static Images / Slideshow)", "all")
+        self.cmb_media_mode.addItem("📹 Video Files Only (.mp4, .avi, .mov, .webm)", "video_only")
+        self.cmb_media_mode.addItem("🖼️ Static Images / Slideshow Only (.png, .jpg, .jpeg, .bmp)", "image_only")
+        self.cmb_media_mode.setStyleSheet("background: #191E2A; color: white; padding: 5px; border-radius: 4px;")
+        self.cmb_media_mode.currentIndexChanged.connect(self.scan_video_directory)
+        form_layout.addRow("Media Presentation Mode:", self.cmb_media_mode)
+
+        # Video/Image directory selector
         dir_layout = QHBoxLayout()
         self.lbl_video_dir = QLineEdit(self.video_dir)
         btn_browse = QPushButton("Browse...")
@@ -236,10 +245,10 @@ class VideoDatasetTaskApp(QMainWindow):
         btn_browse.clicked.connect(self.browse_video_dir)
         dir_layout.addWidget(self.lbl_video_dir)
         dir_layout.addWidget(btn_browse)
-        form_layout.addRow("Video Folder:", dir_layout)
+        form_layout.addRow("Media Folder:", dir_layout)
 
         # Audio Options
-        self.chk_audio = QCheckBox("Enable Audio Output during Video Playback")
+        self.chk_audio = QCheckBox("Enable Audio Output during Media Playback")
         self.chk_audio.setChecked(True)
         self.chk_audio.setStyleSheet("color: #FFEAA7; font-weight: bold;")
         form_layout.addRow("Audio Master Switch:", self.chk_audio)
@@ -253,16 +262,16 @@ class VideoDatasetTaskApp(QMainWindow):
         self.chk_ext_audio = QCheckBox("Use External Audio Folder (videos/audio/*.wav)")
         self.chk_ext_audio.setChecked(True)
         self.chk_ext_audio.setStyleSheet("color: #74B9FF; font-weight: bold;")
-        self.chk_ext_audio.setToolTip("If a matching .wav file is found in videos/audio/, it will play in sync with the video.")
+        self.chk_ext_audio.setToolTip("If a matching .wav file is found in videos/audio/, it will play in sync with the video/image.")
         form_layout.addRow("External Audio Source:", self.chk_ext_audio)
 
-        # Video Duration (default 3.0s)
+        # Video/Image Duration (default 3.0s)
         self.spn_video_dur = QDoubleSpinBox()
         self.spn_video_dur.setRange(1.0, 60.0)
         self.spn_video_dur.setValue(3.0)
         self.spn_video_dur.setSingleStep(0.5)
         self.spn_video_dur.setSuffix(" sec")
-        form_layout.addRow("Video Presentation Time:", self.spn_video_dur)
+        form_layout.addRow("Stimulus Presentation Time:", self.spn_video_dur)
 
         # Rest Duration (default 1.5s)
         self.spn_rest_dur = QDoubleSpinBox()
@@ -276,23 +285,23 @@ class VideoDatasetTaskApp(QMainWindow):
         self.spn_reps = QSpinBox()
         self.spn_reps.setRange(1, 20)
         self.spn_reps.setValue(1)
-        form_layout.addRow("Repetitions per Video:", self.spn_reps)
+        form_layout.addRow("Repetitions per Media Item:", self.spn_reps)
 
         # Randomize Order
-        self.chk_random = QCheckBox("Randomize Video Playback Order")
+        self.chk_random = QCheckBox("Randomize Media Playback Order")
         self.chk_random.setChecked(True)
         form_layout.addRow("Order:", self.chk_random)
 
         layout.addWidget(form_group)
 
         # Video scan status label
-        self.lbl_scan_status = QLabel("Scanning video directory...")
+        self.lbl_scan_status = QLabel("Scanning media directory...")
         self.lbl_scan_status.setStyleSheet("color: #74B9FF;")
         layout.addWidget(self.lbl_scan_status)
         self.scan_video_directory()
 
         # Start Button
-        btn_start = QPushButton("▶ START VIDEO DATASET EXPERIMENT")
+        btn_start = QPushButton("▶ START MEDIA DATASET EXPERIMENT")
         btn_start.setFont(QFont("Arial", 14, QFont.Bold))
         btn_start.setStyleSheet("QPushButton { background-color: #00B894; color: white; padding: 12px; border-radius: 6px; } QPushButton:hover { background-color: #00ECB5; }")
         btn_start.clicked.connect(self.start_experiment)
@@ -312,33 +321,61 @@ class VideoDatasetTaskApp(QMainWindow):
             self.lbl_video_dir.setText(folder)
             self.scan_video_directory()
 
-    def find_matching_audio(self, video_path):
-        """Look for matching WAV file in videos/audio/ or alongside the video file."""
+    def find_matching_audios(self, media_path):
+        """
+        Smart Naming & Audio Pairing Convention for Images & Videos:
+        Looks for matching audio tracks in videos/audio/ or alongside the media file.
+        Supports:
+          1. Exact match: 'water_01.png' matches 'water_01.wav'
+          2. Multiple variations: 'water_01.png' matches 'water_01_soundA.wav', 'water_01_soundB.wav'
+          3. Concept prefix match: 'water_01.png' or 'water.png' matches 'water.wav', 'water_track1.wav'
+        """
         if not self.chk_ext_audio.isChecked():
-            return None
+            return []
 
-        base_name = os.path.splitext(os.path.basename(video_path))[0]
+        stem = os.path.splitext(os.path.basename(media_path))[0].lower()
         
-        # Check candidate paths
-        candidates = [
-            os.path.join(self.audio_dir, f"{base_name}.wav"),
-            os.path.join(self.audio_dir, f"{base_name}.mp3"),
-            os.path.join(self.audio_dir, f"{base_name}.m4a"),
-            os.path.join(self.audio_dir, f"{base_name}.aac"),
-            os.path.join(self.audio_dir, f"{base_name}.flac"),
-            os.path.join(self.audio_dir, f"{base_name}.ogg"),
-            os.path.join(os.path.dirname(video_path), f"{base_name}.wav"),
-            os.path.join(os.path.dirname(video_path), f"{base_name}.mp3"),
-            os.path.join(os.path.dirname(video_path), f"{base_name}.m4a"),
-            os.path.join(os.path.dirname(video_path), f"{base_name}.aac"),
-            os.path.join(os.path.dirname(video_path), f"{base_name}.flac"),
-            os.path.join(os.path.dirname(video_path), f"{base_name}.ogg")
-        ]
+        # Concept prefix (e.g. 'water_01' -> 'water', 'fire02' -> 'fire')
+        if '_' in stem:
+            concept_prefix = stem.split('_')[0]
+        else:
+            concept_prefix = stem.rstrip('0123456789')
+            if not concept_prefix:
+                concept_prefix = stem
 
-        for cand in candidates:
-            if os.path.exists(cand):
-                return cand
-        return None
+        audio_dirs = [self.audio_dir, os.path.dirname(media_path)]
+        audio_exts = ('.wav', '.mp3', '.m4a', '.aac', '.flac', '.ogg')
+
+        found_audios = set()
+
+        for a_dir in audio_dirs:
+            if not os.path.exists(a_dir):
+                continue
+            try:
+                for fname in os.listdir(a_dir):
+                    if fname.lower().endswith(audio_exts):
+                        a_stem = os.path.splitext(fname)[0].lower()
+                        full_p = os.path.abspath(os.path.join(a_dir, fname))
+
+                        # Priority match conditions:
+                        if a_stem == stem:
+                            found_audios.add((1, full_p))
+                        elif a_stem.startswith(stem + "_") or a_stem.startswith(stem + "-"):
+                            found_audios.add((2, full_p))
+                        elif a_stem == concept_prefix or a_stem.startswith(concept_prefix + "_") or a_stem.startswith(concept_prefix + "-"):
+                            found_audios.add((3, full_p))
+            except Exception:
+                pass
+
+        if not found_audios:
+            return []
+
+        sorted_matches = sorted(list(found_audios), key=lambda x: (x[0], x[1]))
+        return [p for _, p in sorted_matches]
+
+    def find_matching_audio(self, media_path):
+        audios = self.find_matching_audios(media_path)
+        return audios[0] if audios else None
 
     def scan_video_directory(self):
         target_dir = self.lbl_video_dir.text().strip()
@@ -347,24 +384,37 @@ class VideoDatasetTaskApp(QMainWindow):
             self.video_files = []
             return
 
-        valid_exts = ('.mp4', '.avi', '.mov', '.mkv', '.webm')
+        mode = self.cmb_media_mode.currentData() if hasattr(self, 'cmb_media_mode') else "all"
+        video_exts = ('.mp4', '.avi', '.mov', '.mkv', '.webm')
+        image_exts = ('.png', '.jpg', '.jpeg', '.bmp', '.webp')
+
+        if mode == "video_only":
+            valid_exts = video_exts
+        elif mode == "image_only":
+            valid_exts = image_exts
+        else:
+            valid_exts = video_exts + image_exts
+
         self.video_files = [
-            os.path.join(target_dir, f) for f in os.listdir(target_dir)
+            os.path.join(target_dir, f) for f in sorted(os.listdir(target_dir))
             if f.lower().endswith(valid_exts)
         ]
-        
+
         if self.video_files:
-            paired_audio_count = sum(1 for v in self.video_files if self.find_matching_audio(v) is not None)
-            msg = f"✅ Found {len(self.video_files)} video file(s)."
+            v_cnt = sum(1 for f in self.video_files if f.lower().endswith(video_exts))
+            i_cnt = sum(1 for f in self.video_files if f.lower().endswith(image_exts))
+            paired_audio_count = sum(1 for v in self.video_files if len(self.find_matching_audios(v)) > 0)
+
+            msg = f"✅ Discovered {len(self.video_files)} media item(s) ({v_cnt} video(s), {i_cnt} static image(s))."
             if paired_audio_count > 0:
                 msg += f" 🎵 {paired_audio_count} paired audio track(s) detected in videos/audio/."
             else:
                 msg += f" (Optional audio tracks can be placed in: {self.audio_dir})"
-            
+
             self.lbl_scan_status.setText(msg)
             self.lbl_scan_status.setStyleSheet("color: #00E676;")
         else:
-            self.lbl_scan_status.setText(f"⚠️ No video files (.mp4, .avi, .mov) found in {target_dir}. Please add video files to begin.")
+            self.lbl_scan_status.setText(f"⚠️ No matching media files (.mp4, .png, .jpg) found in {target_dir}.")
             self.lbl_scan_status.setStyleSheet("color: #FF7675;")
 
     def create_task_screen(self):
@@ -373,14 +423,14 @@ class VideoDatasetTaskApp(QMainWindow):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(10)
 
-        # Video Title Header (Title displayed on top of stimulus)
-        self.lbl_video_title = QLabel("VIDEO TITLE")
+        # Video/Image Title Header
+        self.lbl_video_title = QLabel("MEDIA STIMULUS TITLE")
         self.lbl_video_title.setFont(QFont("Arial", 20, QFont.Bold))
         self.lbl_video_title.setAlignment(Qt.AlignCenter)
         self.lbl_video_title.setStyleSheet("color: #FFEAA7; background-color: #191E2A; padding: 10px; border-radius: 6px;")
         layout.addWidget(self.lbl_video_title)
 
-        # Center Display Stack (Video Widget vs. Rest Fixation Screen)
+        # Center Display Stack (Video Widget vs. Image Widget vs. Rest Fixation Screen)
         self.display_stack = QStackedWidget()
         
         # 1. Video Player Widget
@@ -389,7 +439,13 @@ class VideoDatasetTaskApp(QMainWindow):
         self.video_player.setVideoOutput(self.video_widget)
         self.display_stack.addWidget(self.video_widget)
 
-        # 2. Rest / Fixation Screen
+        # 2. Static Image / Slideshow Widget
+        self.image_widget = QLabel()
+        self.image_widget.setAlignment(Qt.AlignCenter)
+        self.image_widget.setStyleSheet("background-color: #000000; border-radius: 8px;")
+        self.display_stack.addWidget(self.image_widget)
+
+        # 3. Rest / Fixation Screen
         self.rest_widget = QWidget()
         rest_layout = QVBoxLayout(self.rest_widget)
         rest_layout.setAlignment(Qt.AlignCenter)
@@ -452,15 +508,17 @@ class VideoDatasetTaskApp(QMainWindow):
         # Build Trial List and process Audio Normalization if enabled
         base_trials = []
         for v_path in self.video_files:
-            audio_path = self.find_matching_audio(v_path)
-            
-            # Apply Normalization to WAV audio if enabled
-            if audio_path and audio_path.lower().endswith('.wav') and self.normalize_audio:
-                base_name = os.path.splitext(os.path.basename(audio_path))[0]
-                norm_path = os.path.join(self.norm_cache_dir, f"{base_name}_norm.wav")
-                audio_path = normalize_wav_file(audio_path, norm_path, target_peak_dB=-1.0)
-            
-            base_trials.append({'video': v_path, 'audio': audio_path})
+            matched_audios = self.find_matching_audios(v_path)
+            if matched_audios:
+                for audio_path in matched_audios:
+                    # Apply Normalization to WAV audio if enabled
+                    if audio_path and audio_path.lower().endswith('.wav') and self.normalize_audio:
+                        base_name = os.path.splitext(os.path.basename(audio_path))[0]
+                        norm_path = os.path.join(self.norm_cache_dir, f"{base_name}_norm.wav")
+                        audio_path = normalize_wav_file(audio_path, norm_path, target_peak_dB=-1.0)
+                    base_trials.append({'video': v_path, 'audio': audio_path})
+            else:
+                base_trials.append({'video': v_path, 'audio': None})
 
         self.trials = []
         for _ in range(self.repetitions):
@@ -489,11 +547,25 @@ class VideoDatasetTaskApp(QMainWindow):
         video_path = trial['video']
         audio_path = trial['audio']
 
+        is_image = video_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.webp'))
         file_name = os.path.splitext(os.path.basename(video_path))[0]
+        icon = "🖼️" if is_image else "📹"
+        media_label = "Static Image" if is_image else "Video"
 
-        self.lbl_video_title.setText(f"📹 {file_name}")
-        self.lbl_status.setText(f"Trial {self.current_trial_idx + 1} / {len(self.trials)}: Playing Video")
-        self.display_stack.setCurrentWidget(self.video_widget)
+        self.lbl_video_title.setText(f"{icon} {file_name}")
+        self.lbl_status.setText(f"Trial {self.current_trial_idx + 1} / {len(self.trials)}: Presenting {media_label}")
+
+        if is_image:
+            pix = QPixmap(video_path)
+            if not pix.isNull():
+                disp_size = self.display_stack.size()
+                if disp_size.width() < 50:
+                    disp_size = self.size()
+                scaled_pix = pix.scaled(disp_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.image_widget.setPixmap(scaled_pix)
+            self.display_stack.setCurrentWidget(self.image_widget)
+        else:
+            self.display_stack.setCurrentWidget(self.video_widget)
 
         # Configure Audio Outputs
         if not self.audio_enabled:
@@ -515,15 +587,16 @@ class VideoDatasetTaskApp(QMainWindow):
         # Broadcast LSL Markers
         norm_str = "NORM_ACTIVE" if (self.normalize_audio and audio_path) else "NORM_OFF"
         self.send_marker(f"Trial_Start_{self.current_trial_idx + 1}")
-        self.send_marker(f"Video_Start_{file_name}_{audio_source_str}_{norm_str}")
+        self.send_marker(f"Media_Start_{file_name}_{audio_source_str}_{norm_str}")
 
         # Start Playback
-        self.video_player.setSource(QUrl.fromLocalFile(video_path))
-        self.video_player.play()
+        if not is_image:
+            self.video_player.setSource(QUrl.fromLocalFile(video_path))
+            self.video_player.play()
         if self.audio_enabled and audio_path is not None:
             self.custom_audio_player.play()
 
-        # Schedule timer for 3.0s (or configured video duration)
+        # Schedule timer for configured duration
         self.phase_start_time = time.time()
         self.current_phase_duration = self.t_video
         self.trial_timer.start(int(self.t_video * 1000))
