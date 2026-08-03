@@ -3,9 +3,6 @@ import os
 _parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
-_curr_dir = os.path.dirname(__file__)
-if _curr_dir not in sys.path:
-    sys.path.insert(0, _curr_dir)
 
 import sys
 import os
@@ -26,11 +23,6 @@ from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 from utils.bids_utils import get_formatted_next_session
 
-try:
-    from pylsl import StreamInfo, StreamOutlet, local_clock
-    HAS_LSL = True
-except ImportError:
-    HAS_LSL = False
 
 
 def discover_music_subfolders(music_dir):
@@ -141,10 +133,12 @@ def generate_music_tracks(sound_dir, selected_subfolder='real'):
     return out_dict
 
 
-class MusicMemoryTaskApp(QMainWindow):
+from tasks.common.base_task import BaseTaskApp
+
+class MusicMemoryTaskApp(BaseTaskApp):
     """BCI Paradigm App for 6-Track Auditory Memory Recall & Musical Imagery."""
     def __init__(self):
-        super().__init__()
+        super().__init__(marker_name='MotorImageryMarkers', source_id='Music_Memory_Markers_2026')
         self.setWindowTitle("BCI 6-Track Music Memory Recall Paradigm")
         self.resize(1080, 800)
 
@@ -152,8 +146,6 @@ class MusicMemoryTaskApp(QMainWindow):
         self.track_catalog = generate_music_tracks(self.sound_dir)
 
         # LSL Marker Outlet
-        self.outlet = None
-        self.init_lsl()
 
         # Audio Player Layer
         self.player = QMediaPlayer()
@@ -183,29 +175,6 @@ class MusicMemoryTaskApp(QMainWindow):
         self.current_phase_duration = 1.0
 
         self.init_ui()
-
-    def init_lsl(self):
-        if HAS_LSL:
-            try:
-                info = StreamInfo(
-                    name='MotorImageryMarkers',
-                    type='Markers',
-                    channel_count=1,
-                    nominal_srate=0,
-                    channel_format='string',
-                    source_id='Music_Memory_Markers_2026'
-                )
-                self.outlet = StreamOutlet(info)
-                print("[+] LSL Marker Outlet created ('MotorImageryMarkers').")
-            except Exception as e:
-                print(f"[-] LSL Outlet error: {e}")
-                self.outlet = None
-
-    def send_marker(self, marker_str):
-        timestamp = local_clock() if HAS_LSL else time.time()
-        print(f"[MARKER @ {timestamp:.3f}] {marker_str}")
-        if self.outlet:
-            self.outlet.push_sample([marker_str], timestamp)
 
     def init_ui(self):
         palette = QPalette()

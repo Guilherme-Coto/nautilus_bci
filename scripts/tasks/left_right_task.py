@@ -3,9 +3,6 @@ import os
 _parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
-_curr_dir = os.path.dirname(__file__)
-if _curr_dir not in sys.path:
-    sys.path.insert(0, _curr_dir)
 
 import sys
 import os
@@ -23,11 +20,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QFont, QColor, QPalette
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
-try:
-    from pylsl import StreamInfo, StreamOutlet, local_clock
-    HAS_LSL = True
-except ImportError:
-    HAS_LSL = False
 
 from recorders.bids_recorder_widget import BIDSRecorderControlWidget
 
@@ -90,9 +82,11 @@ def generate_cue_wavs(sound_dir):
     return files
 
 
-class LeftRightTaskApp(QMainWindow):
+from tasks.common.base_task import BaseTaskApp
+
+class LeftRightTaskApp(BaseTaskApp):
     def __init__(self):
-        super().__init__()
+        super().__init__(marker_name='MotorImageryMarkers', source_id='MI_Task_Markers_2026')
         self.setWindowTitle("BCI All-In-One Motor Imagery Suite (Top, Bottom, Left, Right)")
         self.resize(1080, 820)
 
@@ -101,8 +95,6 @@ class LeftRightTaskApp(QMainWindow):
         self.cue_files = generate_cue_wavs(self.sound_dir)
 
         # LSL Marker Outlet setup
-        self.outlet = None
-        self.init_lsl()
 
         # Dual Audio Engine Setup
         self.music_player = QMediaPlayer()
@@ -142,31 +134,6 @@ class LeftRightTaskApp(QMainWindow):
         self.current_phase_duration = 1.0
 
         self.init_ui()
-
-    def init_lsl(self):
-        if HAS_LSL:
-            try:
-                info = StreamInfo(
-                    name='MotorImageryMarkers',
-                    type='Markers',
-                    channel_count=1,
-                    nominal_srate=0,
-                    channel_format='string',
-                    source_id='MI_Task_Markers_2026'
-                )
-                self.outlet = StreamOutlet(info)
-                print("[+] LSL Marker Outlet created successfully ('MotorImageryMarkers').")
-            except Exception as e:
-                print(f"[-] Failed to create LSL Marker Outlet: {e}")
-                self.outlet = None
-        else:
-            print("[!] PyLSL not installed. Running in standalone visual mode.")
-
-    def send_marker(self, marker_str):
-        timestamp = local_clock() if HAS_LSL else time.time()
-        print(f"[MARKER @ {timestamp:.3f}] {marker_str}")
-        if self.outlet:
-            self.outlet.push_sample([marker_str], timestamp)
 
     def play_cue_sound(self, sound_key):
         """Play overlay audio cue tone layered directly over background music."""
