@@ -87,7 +87,7 @@ Across pooled Session 01 and Session 02 datasets (384 trials total):
 
 If the manufacturer's GDS service (`g.NEEDaccess`) locks up the USB receiver:
 - Click **Emergency Reset GDS Service** inside `run_bci_suite.py`.
-- This restarts the background Windows service in 2 seconds without requiring a PC reboot.
+- This restarts the background Windows service if it fails reboot PC.
 
 ---
 
