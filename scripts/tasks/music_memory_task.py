@@ -289,7 +289,7 @@ class MusicMemoryTaskApp(QMainWindow):
 
         self.reps_combo = QComboBox()
         self.reps_combo.addItems([
-            "3 per track (18 trials total)",
+            "20 per track (120 trials total)",
             "5 per track (30 trials total - Recommended)",
             "8 per track (48 trials total)"
         ])
@@ -425,7 +425,7 @@ class MusicMemoryTaskApp(QMainWindow):
         cue_dur_map = {0: 3.0, 1: 4.0, 2: 5.0, 3: 6.0, 4: 8.0}
         self.t_sample_cue = cue_dur_map.get(self.cue_window_combo.currentIndex(), 5.0)
 
-        reps_map = {0: 3, 1: 5, 2: 8}
+        reps_map = {0: 20, 1: 5, 2: 8,}
         self.reps_per_track = reps_map[self.reps_combo.currentIndex()]
 
         # Generate trial list
