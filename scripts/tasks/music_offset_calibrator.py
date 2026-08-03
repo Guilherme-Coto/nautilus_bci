@@ -3,9 +3,6 @@ import os
 _parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
-_curr_dir = os.path.dirname(__file__)
-if _curr_dir not in sys.path:
-    sys.path.insert(0, _curr_dir)
 
 import sys
 import os
@@ -36,10 +33,12 @@ def get_audio_duration_seconds(file_path):
     return 300.0
 
 
-class MusicOffsetCalibratorApp(QMainWindow):
+from tasks.common.base_task import BaseTaskApp
+
+class MusicOffsetCalibratorApp(BaseTaskApp):
     """Standalone Companion App for Looping Audio & Start Offset Calibration."""
     def __init__(self):
-        super().__init__()
+        super().__init__(marker_name='MusicCalibrationMarkers', source_id='Music_Calib_Markers_2026')
         self.setWindowTitle("🎵 Music Offset & Tempo Calibrator (Looping Companion Studio)")
         self.resize(750, 600)
 

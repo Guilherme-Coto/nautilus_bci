@@ -12,9 +12,6 @@ import os
 _parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
-_curr_dir = os.path.dirname(__file__)
-if _curr_dir not in sys.path:
-    sys.path.insert(0, _curr_dir)
 
 import random
 import time
@@ -32,11 +29,6 @@ from PySide6.QtGui import QFont, QColor, QPalette, QPixmap
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
 
-try:
-    from pylsl import StreamInfo, StreamOutlet, local_clock
-    HAS_LSL = True
-except ImportError:
-    HAS_LSL = False
 
 from recorders.bids_recorder_widget import BIDSRecorderControlWidget
 
@@ -93,9 +85,11 @@ def normalize_wav_file(input_path, output_path, target_peak_dB=-1.0):
         return input_path
 
 
-class VideoDatasetTaskApp(QMainWindow):
+from tasks.common.base_task import BaseTaskApp
+
+class VideoDatasetTaskApp(BaseTaskApp):
     def __init__(self):
-        super().__init__()
+        super().__init__(marker_name='VideoTaskMarkers', source_id='Video_Task_Markers_2026')
         self.setWindowTitle("BCI Video Dataset Presentation Suite")
         self.resize(1080, 840)
 
@@ -110,8 +104,6 @@ class VideoDatasetTaskApp(QMainWindow):
         os.makedirs(self.norm_cache_dir, exist_ok=True)
 
         # LSL Marker Outlet setup
-        self.outlet = None
-        self.init_lsl()
 
         # Dual Media Engine Setup (Video Player + External WAV Audio Player)
         self.video_player = QMediaPlayer()
@@ -149,31 +141,6 @@ class VideoDatasetTaskApp(QMainWindow):
         self.current_phase_duration = 1.0
 
         self.init_ui()
-
-    def init_lsl(self):
-        if HAS_LSL:
-            try:
-                info = StreamInfo(
-                    name='VideoTaskMarkers',
-                    type='Markers',
-                    channel_count=1,
-                    nominal_srate=0,
-                    channel_format='string',
-                    source_id='Video_Task_Markers_2026'
-                )
-                self.outlet = StreamOutlet(info)
-                print("[+] LSL Marker Outlet created successfully ('VideoTaskMarkers').")
-            except Exception as e:
-                print(f"[-] Failed to create LSL Marker Outlet: {e}")
-                self.outlet = None
-        else:
-            print("[!] PyLSL not installed. Running in standalone visual mode.")
-
-    def send_marker(self, marker_str):
-        timestamp = local_clock() if HAS_LSL else time.time()
-        print(f"[MARKER @ {timestamp:.3f}] {marker_str}")
-        if self.outlet:
-            self.outlet.push_sample([marker_str], timestamp)
 
     def init_ui(self):
         palette = QPalette()
