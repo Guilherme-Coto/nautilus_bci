@@ -35,16 +35,17 @@ class BaseTaskApp(QMainWindow):
         else:
             print("[!] PyLSL not installed. Running in standalone visual mode.")
 
-    def send_marker(self, marker_str):
+    def send_marker(self, marker_str, duration=0.1):
         timestamp = local_clock() if HAS_LSL else time.time()
-        print(f"[MARKER @ {timestamp:.3f}] {marker_str}")
+        # Append duration suffix for BIDS recorder parsing
+        lsl_str = f"{marker_str}_dur_{duration}"
+        print(f"[MARKER @ {timestamp:.3f}] {marker_str} (Duration: {duration}s)")
 
         # Dispatch to LSL network
         if self.outlet:
-            self.outlet.push_sample([marker_str], timestamp)
+            self.outlet.push_sample([lsl_str], timestamp)
 
         # Hook directly into local recorder if active
         if hasattr(self, 'recorder_widget') and self.recorder_widget and self.recorder_widget.recorder and self.recorder_widget.recorder.is_recording:
-            # We must account for recorder's local start_time_lsl
             rel_time = timestamp - self.recorder_widget.recorder.start_time_lsl
-            self.recorder_widget.recorder.marker_events.append((rel_time, str(marker_str)))
+            self.recorder_widget.recorder.marker_events.append((rel_time, str(marker_str), duration))

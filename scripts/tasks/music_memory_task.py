@@ -443,8 +443,8 @@ class MusicMemoryTaskApp(BaseTaskApp):
         self.lbl_trial_count.setText(f"Trial {self.trial_idx + 1} / {len(self.trials)}")
         self.send_marker(f"Trial_Start_{self.trial_idx + 1}_Track_{self.current_track_key}")
 
-        # Phase 1: Cue Audio Sample
-        self.send_marker(f"Cue_Audio_Sample_{self.current_track_key}")
+        # Phase 1: Cue Audio Sample (Listening Phase)
+        self.send_marker(f"Cue_Audio_Sample_{self.current_track_key}", self.t_sample_cue)
         
         # Play song cue snippet starting at exact calibrated theme offset
         if os.path.exists(self.track_info['file']):
@@ -458,8 +458,8 @@ class MusicMemoryTaskApp(BaseTaskApp):
             # Stop music sample
             self.player.stop()
             
-            # Phase 2: Auditory Memory Recall / Imagery (5.0s)
-            self.send_marker(f"Task_Recall_{self.current_track_key}")
+            # Phase 2: Auditory Memory Recall / Imagery
+            self.send_marker(f"Task_Recall_{self.current_track_key}", self.t_recall_task)
             
             self.set_phase(
                 "RecallTask",
@@ -470,8 +470,8 @@ class MusicMemoryTaskApp(BaseTaskApp):
             )
 
         elif self.current_phase_name == "RecallTask":
-            # Phase 3: Rest (2.5s)
-            self.send_marker("Rest")
+            # Phase 3: Rest
+            self.send_marker("Rest", self.t_rest)
             self.set_phase("Rest", "•", "RELAX & REST", "#A0A5B5", self.t_rest)
 
         elif self.current_phase_name == "Rest":

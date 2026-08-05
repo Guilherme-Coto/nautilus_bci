@@ -137,7 +137,15 @@ class MultimodalBIDSRecorder:
                         if stype == 'MARKERS':
                             for m, t in zip(chunk, timestamps):
                                 m_str = m[0] if isinstance(m, list) else str(m)
-                                self.marker_events.append((t - self.start_time_lsl, m_str))
+                                duration = 0.1
+                                if '_dur_' in m_str:
+                                    try:
+                                        parts = m_str.split('_dur_')
+                                        m_str = parts[0]
+                                        duration = float(parts[1])
+                                    except Exception:
+                                        pass
+                                self.marker_events.append((t - self.start_time_lsl, m_str, duration))
                         else:
                             self.data_buffers[sname].extend(chunk)
                             self.timestamp_buffers[sname].extend([t - self.start_time_lsl for t in timestamps])
@@ -196,9 +204,9 @@ class MultimodalBIDSRecorder:
 
             # Add Marker annotations
             if self.marker_events:
-                onsets = [t for t, _ in self.marker_events]
-                durations = [0.1] * len(onsets)
-                descriptions = [m for _, m in self.marker_events]
+                onsets = [item[0] for item in self.marker_events]
+                durations = [item[2] if len(item) > 2 else 0.1 for item in self.marker_events]
+                descriptions = [item[1] for item in self.marker_events]
                 annot = mne.Annotations(onset=onsets, duration=durations, description=descriptions)
                 raw.set_annotations(annot)
 

@@ -442,6 +442,7 @@ class LeftRightTaskApp(BaseTaskApp):
         self.current_trial_direction = self.trials[self.trial_idx]
         self.lbl_trial_count.setText(f"Trial {self.trial_idx + 1} / {len(self.trials)}")
         self.send_marker(f"Trial_Start_{self.trial_idx + 1}_Dir_{self.current_trial_direction}")
+        self.send_marker("Fixation", self.t_fixation)
 
         fixation_msg = "CLOSE EYES & PREPARE" if self.eyes_closed_mode else "CLEAR YOUR MIND"
         self.set_phase("Fixation", "+", fixation_msg, "#FFEAA7", self.t_fixation)
@@ -463,7 +464,7 @@ class LeftRightTaskApp(BaseTaskApp):
             else:
                 instruction = f"PREPARE: THINK {dir_name.upper()}"
 
-            self.send_marker(f"Cue_{dir_name}")
+            self.send_marker(f"Cue_{dir_name}", self.t_cue)
             
             if self.audio_cues_enabled:
                 sound_key = dir_name.lower()
@@ -475,7 +476,7 @@ class LeftRightTaskApp(BaseTaskApp):
         elif self.current_phase_name == "Cue":
             # Phase 3: Task Imagery (4.0s)
             instruction = f"MENTALLY IMAGINE MOVING {dir_name.upper()}"
-            self.send_marker(f"Task_{dir_name}")
+            self.send_marker(f"Task_{dir_name}", self.t_task)
             
             if self.audio_cues_enabled:
                 self.play_cue_sound('go')
@@ -484,7 +485,7 @@ class LeftRightTaskApp(BaseTaskApp):
 
         elif self.current_phase_name == "Task":
             # Phase 4: Rest (2.0s)
-            self.send_marker("Rest")
+            self.send_marker("Rest", self.t_rest)
             if self.audio_cues_enabled:
                 self.play_cue_sound('rest')
                 
