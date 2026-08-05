@@ -80,24 +80,59 @@ class MultimodalBIDSRecorder:
         return True
 
     def start_recording(self):
-        if not self.inlets:
-            print("[-] Cannot start: No LSL streams connected.")
-            return
-
         self.is_recording = True
         self.start_time_lsl = local_clock()
 
+        # Start recording loop
         self.recording_thread = threading.Thread(target=self._record_loop, daemon=True)
         self.recording_thread.start()
-        print("\n[START] Multimodal Recording actively capturing all streams...")
+
+        # Start separate stream discovery loop (non-blocking, robust timeout)
+        self.discovery_thread = threading.Thread(target=self._discovery_loop, daemon=True)
+        self.discovery_thread.start()
+        print("\n[START] Multimodal Recording actively capturing all streams (dynamic discovery enabled)...")
+
+    def _discovery_loop(self):
+        while self.is_recording:
+            try:
+                # Use a larger timeout (0.8s) to reliably detect LSL streams (e.g. task markers)
+                streams = resolve_streams(wait_time=0.8)
+                for s in streams:
+                    sname = s.name()
+                    if sname not in self.inlets:
+                        stype = s.type().upper()
+                        print(f"[+] Dynamically discovered stream: '{sname}' | Type: '{stype}'")
+                        try:
+                            inlet = StreamInlet(s, max_chunklen=64)
+                            self.inlets[sname] = {
+                                'inlet': inlet,
+                                'info': s,
+                                'type': stype,
+                                'srate': s.nominal_srate(),
+                                'n_ch': s.channel_count()
+                            }
+                            if sname not in self.data_buffers:
+                                self.data_buffers[sname] = []
+                                self.timestamp_buffers[sname] = []
+                        except Exception as e:
+                            print(f"[-] Failed to connect to dynamic stream '{sname}': {e}")
+            except Exception:
+                pass
+            time.sleep(1.0)
 
     def _record_loop(self):
         while self.is_recording:
-            for sname, item in self.inlets.items():
+            # Pull chunks from all active inlets
+            # Create a static list of keys to prevent runtime dictionary modification issues
+            active_names = list(self.inlets.keys())
+            for sname in active_names:
+                item = self.inlets.get(sname)
+                if not item:
+                    continue
                 inlet = item['inlet']
                 stype = item['type']
                 try:
-                    chunk, timestamps = inlet.pull_chunk(timeout=0.05)
+                    chunk, timestamps = inlet.pull_chunk(timeout=0.005)
                     if timestamps:
                         if stype == 'MARKERS':
                             for m, t in zip(chunk, timestamps):
@@ -106,8 +141,10 @@ class MultimodalBIDSRecorder:
                         else:
                             self.data_buffers[sname].extend(chunk)
                             self.timestamp_buffers[sname].extend([t - self.start_time_lsl for t in timestamps])
-                except Exception as e:
-                    pass
+                except Exception:
+                    # If stream fails/disconnects, we can remove it so we attempt reconnect later
+                    print(f"[-] Stream disconnected: {sname}")
+                    self.inlets.pop(sname, None)
             time.sleep(0.005)
 
     def stop_and_export_bids(self, subject_id="01", session_id="01", task_name="leftright"):

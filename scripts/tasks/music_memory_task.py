@@ -144,6 +144,7 @@ class MusicMemoryTaskApp(BaseTaskApp):
 
         self.sound_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "music_tracks"))
         self.track_catalog = generate_music_tracks(self.sound_dir)
+        self.bids_root = "bids_dataset_multimodal"
 
         # LSL Marker Outlet
 
@@ -409,6 +410,8 @@ class MusicMemoryTaskApp(BaseTaskApp):
         ses = self.ses_input.text()
         self.send_marker(f"Experiment_Start_Sub_{sub}_Ses_{ses}_Paradigm_MusicMemoryRecall_CueDur_{self.t_sample_cue:.1f}s")
 
+        self.save_tracks_bids_metadata(sub, ses)
+
         self.stacked_widget.setCurrentWidget(self.task_screen)
         self.run_next_trial()
 
@@ -508,6 +511,28 @@ class MusicMemoryTaskApp(BaseTaskApp):
         
         QTimer.singleShot(3000, self.reset_to_config)
 
+    def save_tracks_bids_metadata(self, sub, ses):
+        try:
+            sub_clean = sub.replace("sub-", "")
+            ses_clean = ses.replace("ses-", "")
+            bids_dir = os.path.join(self.bids_root, f"sub-{sub_clean}", f"ses-{ses_clean}")
+            os.makedirs(bids_dir, exist_ok=True)
+
+            mapping = {}
+            for k, info in self.track_catalog.items():
+                mapping[k] = {
+                    "name": info["name"],
+                    "audio_type": info["audio_type"],
+                    "filename": info["filename"]
+                }
+
+            out_file = os.path.join(bids_dir, f"sub-{sub_clean}_ses-{ses_clean}_tracks.json")
+            with open(out_file, 'w', encoding='utf-8') as f:
+                json.dump(mapping, f, indent=4)
+            print(f"[+] Saved track catalog metadata mapping to: {out_file}")
+        except Exception as e:
+            print(f"[-] Failed to save track BIDS metadata: {e}")
+
     def stop_experiment(self):
         self.tick_timer.stop()
         self.trial_timer.stop()
@@ -519,8 +544,23 @@ class MusicMemoryTaskApp(BaseTaskApp):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Music Memory Task")
+    parser.add_argument("--sub", type=str, default="01", help="Subject ID")
+    parser.add_argument("--ses", type=str, default="01", help="Session ID")
+    parser.add_argument("--bids-root", "--dataset-folder", type=str, default="bids_dataset_multimodal", help="Target BIDS dataset output directory")
+    args, unknown = parser.parse_known_args()
+
     app = QApplication(sys.argv)
     window = MusicMemoryTaskApp()
+
+    if args.bids_root:
+        window.bids_root = args.bids_root
+    if args.sub:
+        window.sub_input.setText(args.sub.replace('sub-', ''))
+    if args.ses:
+        window.ses_input.setText(args.ses.replace('ses-', ''))
+
     window.show()
     sys.exit(app.exec())
 

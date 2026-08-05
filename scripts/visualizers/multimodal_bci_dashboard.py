@@ -39,7 +39,6 @@ try:
 except ImportError:
     HAS_LSL = False
 
-from recorders.multimodal_bids_recorder import MultimodalBIDSRecorder
 from visualizers.eeg_headmap_quality_visualizer import HeadMapCanvas, ELECTRODE_POSITIONS_1020
 
 
@@ -62,10 +61,9 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.resize(1300, 850)
 
         self.initial_bids_root = initial_bids_root
-        # Process & Recording handles
+        # Process handles
         self.streamer_process = None
         self.watch_bridge_process = None
-        self.recorder = None
 
         # LSL Stream Inlets
         self.eeg_inlet = None
@@ -175,26 +173,6 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         top_bar = QtWidgets.QGroupBox("🎛️ Master Control & Stream Launcher")
         top_layout = QtWidgets.QHBoxLayout(top_bar)
 
-        top_layout.addWidget(QtWidgets.QLabel("Sub:"))
-        self.txt_sub = QtWidgets.QLineEdit("01")
-        self.txt_sub.setFixedWidth(45)
-        top_layout.addWidget(self.txt_sub)
-
-        top_layout.addWidget(QtWidgets.QLabel("Ses:"))
-        self.txt_ses = QtWidgets.QLineEdit("01")
-        self.txt_ses.setFixedWidth(45)
-        top_layout.addWidget(self.txt_ses)
-
-        top_layout.addWidget(QtWidgets.QLabel("Folder:"))
-        self.txt_outdir = QtWidgets.QLineEdit(self.initial_bids_root)
-        self.txt_outdir.setMinimumWidth(150)
-        top_layout.addWidget(self.txt_outdir)
-
-        self.btn_browse_bids = QtWidgets.QPushButton("Browse...")
-        self.btn_browse_bids.setStyleSheet("background-color: #2C354A; color: white; padding: 4px 8px; border-radius: 4px;")
-        self.btn_browse_bids.clicked.connect(self.browse_bids_folder)
-        top_layout.addWidget(self.btn_browse_bids)
-
         self.btn_streamer = QtWidgets.QPushButton("▶ Launch EEG Streamer")
         self.btn_streamer.setStyleSheet("background-color: #2980B9; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
         self.btn_streamer.clicked.connect(self.toggle_eeg_streamer)
@@ -204,11 +182,6 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.btn_watch_bridge.setStyleSheet("background-color: #8E44AD; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
         self.btn_watch_bridge.clicked.connect(self.toggle_watch_bridge)
         top_layout.addWidget(self.btn_watch_bridge)
-
-        self.btn_record = QtWidgets.QPushButton("🔴 Start Multimodal BIDS Recording")
-        self.btn_record.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 16px; border-radius: 4px;")
-        self.btn_record.clicked.connect(self.toggle_bids_recording)
-        top_layout.addWidget(self.btn_record)
 
         self.lbl_status_eeg = QtWidgets.QLabel("EEG: 🔴 Offline")
         self.lbl_status_eeg.setStyleSheet("color: #E74C3C; font-weight: bold;")
@@ -382,39 +355,7 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
             self.btn_watch_bridge.setText("⌚ Launch Watch Bridge")
             self.btn_watch_bridge.setStyleSheet("background-color: #8E44AD; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
 
-    def browse_bids_folder(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(self, "Select BIDS Target Dataset Directory", self.txt_outdir.text().strip())
-        if folder:
-            self.txt_outdir.setText(folder)
-
-    def toggle_bids_recording(self):
-        if self.recorder is None or not self.recorder.is_recording:
-            try:
-                sub = self.txt_sub.text().strip()
-                ses = self.txt_ses.text().strip()
-                outdir = self.txt_outdir.text().strip()
-                self.recorder = MultimodalBIDSRecorder(bids_root=outdir)
-                connected = self.recorder.discover_and_connect_streams(timeout=3.0)
-                if not connected:
-                    raise RuntimeError("No active LSL streams discovered.")
-                self.recorder.start_recording()
-                self.btn_record.setText("⏹ Stop & Export Multimodal BIDS")
-                self.btn_record.setStyleSheet("background-color: #D63031; color: white; font-weight: bold; padding: 6px 16px; border-radius: 4px;")
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self, "Recording Error", f"Could not start recording:\n{e}")
-                self.recorder = None
-        else:
-            sub = self.txt_sub.text().strip()
-            ses = self.txt_ses.text().strip()
-            try:
-                self.recorder.stop_and_export_bids(subject_id=sub, session_id=ses)
-                out_path = self.txt_outdir.text().strip()
-                QtWidgets.QMessageBox.information(self, "Recording Saved", f"Multimodal BIDS dataset saved successfully to:\n{out_path}")
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self, "Export Error", f"Error saving BIDS dataset:\n{e}")
-            self.recorder = None
-            self.btn_record.setText("🔴 Start Multimodal BIDS Recording")
-            self.btn_record.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 16px; border-radius: 4px;")
+    # BIDS recording methods removed (managed by standalone recorder GUI)
 
     def discover_lsl_streams(self):
         if not HAS_LSL:

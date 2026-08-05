@@ -21,7 +21,7 @@ from PySide6.QtGui import QFont, QColor, QPalette
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 
-from recorders.bids_recorder_widget import BIDSRecorderControlWidget
+# BIDSRecorderControlWidget removed (managed by standalone recorder GUI)
 
 
 def generate_cue_wavs(sound_dir):
@@ -181,12 +181,22 @@ class LeftRightTaskApp(BaseTaskApp):
         subtitle.setStyleSheet("color: #A0A5B5;")
         layout.addWidget(subtitle)
 
-        # Integrated BIDS Recording & Participant Metadata Box
-        self.recorder_widget = BIDSRecorderControlWidget(default_task="leftright", default_bids_root="bids_dataset")
-        layout.addWidget(self.recorder_widget)
-
-        self.sub_input = self.recorder_widget.txt_sub
-        self.ses_input = self.recorder_widget.txt_ses
+        # Participant Metadata Box (Decoupled from BIDS GUI)
+        meta_group = QGroupBox("👤 Participant Metadata")
+        meta_group.setStyleSheet("QGroupBox { font-size: 13px; font-weight: bold; color: #4DEEEA; border: 1px solid #2C3545; border-radius: 8px; margin-top: 5px; padding-top: 12px; }")
+        meta_form = QFormLayout(meta_group)
+        
+        self.sub_input = QLineEdit("01")
+        self.sub_input.setFixedWidth(60)
+        self.sub_input.setStyleSheet("background-color: #191E2A; color: white; border: 1px solid #2C354A; border-radius: 4px; padding: 4px;")
+        
+        self.ses_input = QLineEdit("01")
+        self.ses_input.setFixedWidth(60)
+        self.ses_input.setStyleSheet("background-color: #191E2A; color: white; border: 1px solid #2C354A; border-radius: 4px; padding: 4px;")
+        
+        meta_form.addRow("Subject ID:", self.sub_input)
+        meta_form.addRow("Session ID:", self.ses_input)
+        layout.addWidget(meta_group)
 
         # Setup Form Box
         config_group = QGroupBox("Paradigm & Audio Configuration")
@@ -560,13 +570,10 @@ def main():
     app = QApplication(sys.argv)
     window = LeftRightTaskApp()
 
-    if hasattr(window, 'recorder_widget') and window.recorder_widget:
-        if args.sub:
-            window.recorder_widget.txt_sub.setText(args.sub.replace('sub-', ''))
-        if args.ses:
-            window.recorder_widget.txt_ses.setText(args.ses.replace('ses-', ''))
-        if args.bids_root:
-            window.recorder_widget.txt_outdir.setText(args.bids_root)
+    if args.sub:
+        window.sub_input.setText(args.sub.replace('sub-', ''))
+    if args.ses:
+        window.ses_input.setText(args.ses.replace('ses-', ''))
 
     window.show()
     sys.exit(app.exec())

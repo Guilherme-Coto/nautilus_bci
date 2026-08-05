@@ -1,0 +1,9 @@
+{
+  "SamplingFrequency": 1.0,
+  "StartTime": 169084.9425542,
+  "Columns": [
+    "timestamp_sec",
+    "ch_1",
+    "ch_2"
+  ]
+}

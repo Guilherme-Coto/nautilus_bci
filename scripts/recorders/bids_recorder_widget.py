@@ -177,7 +177,12 @@ class BIDSRecorderControlWidget(QtWidgets.QGroupBox):
 
     def update_live_stats(self):
         if self.recorder and self.recorder.is_recording:
-            n_eeg = len(self.recorder.data_buffers.get('eeg', []))
+            n_eeg = 0
+            # Search dynamically through inlets to find EEG stream and its buffers
+            for sname, info in self.recorder.inlets.items():
+                if info['type'] == 'EEG':
+                    n_eeg = len(self.recorder.data_buffers.get(sname, []))
+                    break
             n_mrk = len(self.recorder.marker_events)
             self.lbl_status.setText(f"STATUS: 🔴 RECORDING LIVE | {n_eeg} EEG samples | {n_mrk} Events")
 

@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QFont, QColor, QPalette
 
-from recorders.bids_recorder_widget import BIDSRecorderControlWidget
+# BIDSRecorderControlWidget removed (managed by standalone recorder GUI)
 
 
 def extract_task_metadata(filepath):
@@ -150,17 +150,27 @@ class TaskLauncherApp(QMainWindow):
         subtitle.setStyleSheet("color: #A0A5B5;")
         main_layout.addWidget(subtitle)
 
-        # BIDS Recording & Metadata Box
-        self.recorder_widget = BIDSRecorderControlWidget(default_task="task_select", default_bids_root="bids_dataset")
+        # Metadata / Controls Box (Decoupled from BIDS GUI)
+        self.controls_group = QGroupBox("👤 Session Parameters")
+        self.controls_group.setStyleSheet("QGroupBox { font-size: 13px; font-weight: bold; color: #4DEEEA; border: 1px solid #2C354A; border-radius: 8px; margin-top: 10px; padding: 15px; }")
+        ctrl_layout = QHBoxLayout(self.controls_group)
+        
+        ctrl_layout.addWidget(QLabel("Sub:"))
+        self.txt_sub = QLineEdit("01")
+        self.txt_sub.setFixedWidth(50)
+        ctrl_layout.addWidget(self.txt_sub)
+        
+        ctrl_layout.addWidget(QLabel("Ses:"))
+        self.txt_ses = QLineEdit("01")
+        self.txt_ses.setFixedWidth(50)
+        ctrl_layout.addWidget(self.txt_ses)
         
         btn_refresh = QPushButton("🔄 Refresh Task Folder")
         btn_refresh.setStyleSheet("background-color: #2C354A; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold;")
         btn_refresh.clicked.connect(self.populate_task_cards)
+        ctrl_layout.addWidget(btn_refresh)
         
-        # Add refresh button into recorder widget layout
-        self.recorder_widget.layout().itemAt(0).layout().addWidget(btn_refresh)
-
-        main_layout.addWidget(self.recorder_widget)
+        main_layout.addWidget(self.controls_group)
 
         # Scroll Area for Task Cards
         self.scroll_area = QScrollArea()
@@ -260,9 +270,9 @@ class TaskLauncherApp(QMainWindow):
     def launch_task_script(self, filepath):
         print(f"[+] Launching task script: {filepath}")
         try:
-            sub = self.recorder_widget.get_subject_id()
-            ses = self.recorder_widget.get_session_id()
-            outdir = self.recorder_widget.get_bids_folder()
+            sub = self.txt_sub.text().strip()
+            ses = self.txt_ses.text().strip()
+            outdir = "bids_dataset_multimodal"
             proc = subprocess.Popen([sys.executable, filepath, "--sub", sub, "--ses", ses, "--bids-root", outdir])
             self.active_processes.append(proc)
         except Exception as e:
