@@ -56,9 +56,9 @@ def analyze_music_bci(bids_root="bids_dataset", subject_id="01", session_id="04"
 
     os.makedirs(out_dir, exist_ok=True)
 
-    # 1. Bandpass Filtering (1.0 Hz - 45.0 Hz) + Notch Filter (50 Hz)
-    print("[*] Applying EEG Bandpass Filter (1.0 Hz - 45.0 Hz) & 50 Hz Notch filter...")
-    raw_filtered = raw.copy().filter(l_freq=1.0, h_freq=45.0, verbose=False)
+    # 1. Bandpass Filtering (4.0 Hz - 45.0 Hz) + Notch Filter (50 Hz)
+    print("[*] Applying EEG Bandpass Filter (4.0 Hz - 45.0 Hz) & 50 Hz Notch filter...")
+    raw_filtered = raw.copy().filter(l_freq=4.0, h_freq=45.0, verbose=False)
     raw_filtered.notch_filter(freqs=50.0, verbose=False)
 
     # 2. Compute Power Spectral Density (PSD) across Frequency Bands
@@ -130,12 +130,22 @@ def analyze_music_bci(bids_root="bids_dataset", subject_id="01", session_id="04"
     # 3. Machine Learning Classification Analysis (CSP + LDA)
     events, event_id = mne.events_from_annotations(raw_filtered, verbose=False)
     
+    # Filter event_id to only include the target 'Task_Recall' event markers (ignoring setup and start/stop markers)
+    target_event_id = {}
+    for k, v in event_id.items():
+        if 'Task_Recall' in k:
+            target_event_id[k] = v
+            
+    if not target_event_id:
+        print("[!] Warning: No 'Task_Recall' events found in annotations. Falling back to all event IDs.")
+        target_event_id = event_id
+
     # Epoching trial data (0s to 4s)
     tmin, tmax = 0.0, 4.0
     epochs = mne.Epochs(
         raw_filtered,
         events,
-        event_id=event_id,
+        event_id=target_event_id,
         tmin=tmin,
         tmax=tmax,
         baseline=None,
@@ -186,14 +196,21 @@ def analyze_music_bci(bids_root="bids_dataset", subject_id="01", session_id="04"
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Analyze Music BCI Dataset (sub-01 ses-04).")
+    parser = argparse.ArgumentParser(description="Analyze Music BCI Dataset.")
     parser.add_argument("--bids-root", type=str, default="bids_dataset", help="Path to BIDS dataset root")
     parser.add_argument("--sub", type=str, default="01", help="Subject ID (e.g., 01)")
     parser.add_argument("--ses", type=str, default="04", help="Session ID (e.g., 04)")
+    parser.add_argument("--task", type=str, default="leftright", help="Task name")
     parser.add_argument("--outdir", type=str, default="analysis_results", help="Directory to save figures")
     args = parser.parse_args()
 
-    analyze_music_bci(bids_root=args.bids_root, subject_id=args.sub, session_id=args.ses, out_dir=args.outdir)
+    analyze_music_bci(
+        bids_root=args.bids_root, 
+        subject_id=args.sub, 
+        session_id=args.ses, 
+        task_name=args.task, 
+        out_dir=args.outdir
+    )
 
 
 if __name__ == "__main__":
