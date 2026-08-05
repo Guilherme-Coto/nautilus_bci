@@ -1,0 +1,32 @@
+{
+    "Track_1": {
+        "name": "Track 1: Bach Prelude",
+        "audio_type": "Real Master Performance",
+        "filename": "real_bach_prelude.wav"
+    },
+    "Track_2": {
+        "name": "Track 2: Beethoven Fur Elise",
+        "audio_type": "Real Master Performance",
+        "filename": "real_beethoven_fur_elise.wav"
+    },
+    "Track_3": {
+        "name": "Track 3: Joplin Entertainer",
+        "audio_type": "Real Master Performance",
+        "filename": "real_joplin_entertainer.wav"
+    },
+    "Track_4": {
+        "name": "Track 4: Mozart Eine Kleine",
+        "audio_type": "Real Master Performance",
+        "filename": "real_mozart_eine_kleine.wav"
+    },
+    "Track_5": {
+        "name": "Track 5: Tchaikovsky Waltz",
+        "audio_type": "Real Master Performance",
+        "filename": "real_tchaikovsky_waltz.wav"
+    },
+    "Track_6": {
+        "name": "Track 6: Vivaldi Spring",
+        "audio_type": "Real Master Performance",
+        "filename": "real_vivaldi_spring.wav"
+    }
+}
