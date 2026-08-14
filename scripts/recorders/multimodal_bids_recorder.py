@@ -203,12 +203,21 @@ class MultimodalBIDSRecorder:
             raw = mne.io.RawArray(eeg_raw_data, mne_info)
 
             # Add Marker annotations
-            if self.marker_events:
-                onsets = [item[0] for item in self.marker_events]
-                durations = [item[2] if len(item) > 2 else 0.1 for item in self.marker_events]
-                descriptions = [item[1] for item in self.marker_events]
-                annot = mne.Annotations(onset=onsets, duration=durations, description=descriptions)
-                raw.set_annotations(annot)
+            if self.marker_events and len(self.timestamp_buffers[eeg_stream_name]) > 0:
+                first_eeg_ts = self.timestamp_buffers[eeg_stream_name][0]
+                onsets = []
+                durations = []
+                descriptions = []
+                for item in self.marker_events:
+                    onset = item[0] - first_eeg_ts
+                    if onset >= 0:
+                        onsets.append(onset)
+                        descriptions.append(item[1])
+                        durations.append(item[2] if len(item) > 2 else 0.1)
+                
+                if onsets:
+                    annot = mne.Annotations(onset=onsets, duration=durations, description=descriptions)
+                    raw.set_annotations(annot)
 
             bids_path = BIDSPath(
                 subject=sub_clean,
@@ -219,6 +228,23 @@ class MultimodalBIDSRecorder:
             )
             write_raw_bids(raw, bids_path=bids_path, allow_preload=True, format='BrainVision', overwrite=True, verbose=False)
             print(f"[+] Exported EEG BIDS data: sub-{sub_clean}_ses-{ses_clean}_task-{task_name}_eeg")
+        else:
+            # If no EEG stream, export markers standalone so they aren't lost!
+            if self.marker_events:
+                bids_sub_dir = os.path.join(self.bids_root, f"sub-{sub_clean}", f"ses-{ses_clean}")
+                beh_dir = os.path.join(bids_sub_dir, "beh")
+                os.makedirs(beh_dir, exist_ok=True)
+                
+                # Markers are already relative to self.start_time_lsl (item[0])
+                import pandas as pd
+                events_df = pd.DataFrame({
+                    "onset": [max(0.0, item[0]) for item in self.marker_events],
+                    "duration": [item[2] if len(item) > 2 else 0.1 for item in self.marker_events],
+                    "trial_type": [item[1] for item in self.marker_events]
+                })
+                events_path = os.path.join(beh_dir, f"sub-{sub_clean}_ses-{ses_clean}_task-{task_name}_events.tsv")
+                events_df.to_csv(events_path, sep='\t', index=False)
+                print(f"[+] Exported Standalone Events BIDS data to: {events_path}")
 
         # 2. Export Smartwatch IMU & PPG Stream as BIDS Extensions (TSV files)
         bids_sub_dir = os.path.join(self.bids_root, f"sub-{sub_clean}", f"ses-{ses_clean}")
