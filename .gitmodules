@@ -1,1 +1,3 @@
-
+[submodule "galaxy_watch_lsl"]
+    path = galaxy_watch_lsl
+    url = https://github.com/JohnGF/galaxy_watch_lsl
