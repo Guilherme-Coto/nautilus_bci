@@ -1,3 +1,6 @@
 [submodule "galaxy_watch_lsl"]
     path = galaxy_watch_lsl
     url = https://github.com/JohnGF/galaxy_watch_lsl
+[submodule "tower_defense"]
+    path = tower_defense
+    url = https://github.com/Guilherme-Coto/tower-defense-bci
