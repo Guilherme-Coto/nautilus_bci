@@ -1,3 +1,9 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "pylsl>=1.18.2",
+# ]
+# ///
 import argparse
 import socket
 import json
