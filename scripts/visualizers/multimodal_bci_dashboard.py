@@ -219,10 +219,9 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         right_panel.addWidget(self.lbl_headmap_summary)
 
         legend_layout = QtWidgets.QHBoxLayout()
-        legend_layout.addWidget(self.create_legend_dot("GOOD (<80uV)", "#2ECC71"))
-        legend_layout.addWidget(self.create_legend_dot("HIGH NOISE (>80uV)", "#F1C40F"))
-        legend_layout.addWidget(self.create_legend_dot("RAILED (>300uV)", "#E67E22"))
-        legend_layout.addWidget(self.create_legend_dot("FLATLINE (<0.5uV)", "#E74C3C"))
+        legend_layout.addWidget(self.create_legend_dot("POSITIONED / GOOD", "#2ECC71"))
+        legend_layout.addWidget(self.create_legend_dot("HIGH NOISE / ARTIFACT", "#F1C40F"))
+        legend_layout.addWidget(self.create_legend_dot("NO CONTACT / FLATLINE", "#E74C3C"))
         right_panel.addLayout(legend_layout)
 
         self.table_quality = QtWidgets.QTableWidget(len(self.eeg_ch_names) - 1, 3)
@@ -452,45 +451,54 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
             self.render_watch_tab()
 
     def render_headmap_tab(self):
-        stds = np.std(self.eeg_buffer, axis=0)
-        ranges = np.ptp(self.eeg_buffer, axis=0)
-        means = np.abs(np.mean(self.eeg_buffer, axis=0))
+        # Apply bandpass (AC component) to assess electrode scalp coupling independently of DC offset
+        ac_eeg = self.eeg_buffer - np.mean(self.eeg_buffer, axis=0)
+        try:
+            ac_eeg = signal.filtfilt(self.b_bp, self.a_bp, ac_eeg, axis=0)
+        except Exception:
+            pass
+
+        stds = np.std(ac_eeg, axis=0)
+        ranges = np.ptp(ac_eeg, axis=0)
 
         channel_stds = {}
         channel_maxs = {}
         good_count = 0
         flat_count = 0
 
+        # Raw metrics directly from API buffer (DC offset & true raw range)
+        raw_offsets = np.mean(self.eeg_buffer, axis=0)
+        raw_ptps = np.ptp(self.eeg_buffer, axis=0)
+
         for i, name in enumerate(self.eeg_ch_names[:-1]):
             std_val = stds[i]
             ptp_val = ranges[i]
-            mean_val = means[i]
+            raw_dc = raw_offsets[i]
+            raw_p2p = raw_ptps[i]
+
             channel_stds[name] = std_val
             channel_maxs[name] = ptp_val
 
             item_val = self.table_quality.item(i, 1)
             if item_val:
-                item_val.setText(f"std:{std_val:.1f} | p-p:{ptp_val:.1f}")
+                item_val.setText(f"DC: {raw_dc:+.1f} uV | Raw p-p: {raw_p2p:.1f} uV | AC RMS: {std_val:.1f} uV")
 
-            if std_val < 0.5 or ptp_val < 0.5:
-                item = QtWidgets.QTableWidgetItem("FLATLINE")
+            if std_val < 0.2:
+                item = QtWidgets.QTableWidgetItem("NO CONTACT / FLAT")
                 item.setForeground(QtGui.QColor("#E74C3C"))
                 flat_count += 1
-            elif mean_val > 300.0 or ptp_val > 500.0:
-                item = QtWidgets.QTableWidgetItem("RAILED/SATURATED")
-                item.setForeground(QtGui.QColor("#E67E22"))
-            elif std_val > 80.0:
-                item = QtWidgets.QTableWidgetItem("HIGH NOISE")
+            elif std_val > 250.0:
+                item = QtWidgets.QTableWidgetItem("HIGH NOISE / ARTIFACT")
                 item.setForeground(QtGui.QColor("#F1C40F"))
             else:
-                item = QtWidgets.QTableWidgetItem("GOOD")
+                item = QtWidgets.QTableWidgetItem("POSITIONED / OK")
                 item.setForeground(QtGui.QColor("#2ECC71"))
                 good_count += 1
 
             self.table_quality.setItem(i, 2, item)
 
         self.headmap_canvas.update_channel_status(channel_stds, channel_maxs)
-        self.lbl_headmap_summary.setText(f"Active Channels: {good_count}/32 Good ({flat_count} Flat)")
+        self.lbl_headmap_summary.setText(f"Electrode Contact: {good_count}/32 Positioned ({flat_count} Disconnected)")
 
     def render_waves_tab(self):
         filt = self.eeg_buffer - np.mean(self.eeg_buffer, axis=0)

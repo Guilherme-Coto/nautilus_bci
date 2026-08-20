@@ -134,7 +134,7 @@ class HeadMapCanvas(QtWidgets.QGraphicsView):
             self.labels[name] = text_item
 
     def update_channel_status(self, channel_stds, channel_maxs):
-        """Color dots based on signal status."""
+        """Color dots based on electrode contact / positioning status."""
         for name in self.channel_names:
             if name not in self.dots:
                 continue
@@ -142,15 +142,15 @@ class HeadMapCanvas(QtWidgets.QGraphicsView):
             std = channel_stds.get(name, 0.0)
             max_val = channel_maxs.get(name, 0.0)
 
-            # Flatline condition (Low variance)
-            if std < 0.5:
-                # 🔴 FLATLINE / DEAD
+            # Check contact/positioning status (using AC filtered variance & reasonable limits)
+            if std < 0.2:
+                # 🔴 NO CONTACT / DISCONNECTED
                 color = QtGui.QColor(231, 76, 60)
-            elif std > 120.0 or max_val > 300.0:
-                # 🟡 SATURATED / NOISY
+            elif std > 250.0:
+                # 🟡 LOOSE CONTACT / ARTIFACT
                 color = QtGui.QColor(241, 196, 15)
             else:
-                # 🟢 GOOD SIGNAL
+                # 🟢 POSITIONED / GOOD CONTACT
                 color = QtGui.QColor(46, 204, 113)
 
             self.dots[name].setBrush(QtGui.QBrush(color))
