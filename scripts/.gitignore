@@ -12,3 +12,8 @@ ENV/
 # OS metadata
 .DS_Store
 Thumbs.db
+*.lock
+
+# Temporary Test Outputs
+test_bids_dataset/
+test_dev_bids/

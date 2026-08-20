@@ -55,6 +55,26 @@ def print_header(title):
     print(f" {Fore.CYAN}{title}{Style.RESET_ALL} ".center(80, "="))
     print("=" * 70)
 
+def select_cap_type(cli_cap_type=None):
+    if cli_cap_type:
+        mode = cli_cap_type.lower()
+        if mode in ['dry', 'sahara']:
+            return 'dry'
+        return 'wet'
+    if NON_INTERACTIVE:
+        return 'wet'
+    
+    print_header("Electrode Cap Selection")
+    print("Choose electrode hardware type:")
+    print(f"  [1] {Fore.GREEN}Wet Electrodes{Style.RESET_ALL} (g.SCARABEO / g.LADYBIRD Gel) - standard impedance (<30k), raw DC optional")
+    print(f"  [2] {Fore.YELLOW}Dry Electrodes{Style.RESET_ALL} (g.SAHARA Pins) - auto hardware bandpass (prevents DC rail saturation), dry impedance (<100k)")
+    choice = input("\nSelect cap type (1-2) [Default: 1]: ").strip()
+    if choice == '2' or choice.lower() in ['dry', 'sahara', '2']:
+        print(f"{Fore.YELLOW}[+] Selected: g.SAHARA Dry Electrode System{Style.RESET_ALL}")
+        return 'dry'
+    print(f"{Fore.GREEN}[+] Selected: Wet Gel Electrode System{Style.RESET_ALL}")
+    return 'wet'
+
 def battery_monitor_loop(serial):
     global current_battery_level
     log_file = "battery_log.json"
@@ -261,11 +281,12 @@ def run_calibration(device):
     else:
         print(f"{Fore.GREEN}[+] Skipping manual calibration (using built-in factory defaults).{Style.RESET_ALL}")
 
-def run_impedance_loop(device):
-    print_header("Impedance & Contact Quality Check")
+def run_impedance_loop(device, cap_type="wet"):
+    cap_label = "g.SAHARA Dry Pins" if cap_type == "dry" else "Wet Gel Electrodes"
+    print_header(f"Impedance & Contact Quality Check ({cap_label})")
     
     if NON_INTERACTIVE:
-        print(f"{Fore.GREEN}[+] Skipping electrode impedance check (Default: No in non-interactive mode).{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}[+] Skipping electrode impedance check in non-interactive mode.{Style.RESET_ALL}")
         return
 
     choice = input("Would you like to run/rerun the electrode impedance check? (y/n) [Default: n]: ").strip().lower()
@@ -273,8 +294,11 @@ def run_impedance_loop(device):
         print(f"{Fore.YELLOW}[*] Proceeding directly to EEG streaming.{Style.RESET_ALL}")
         return
 
+    # Dry electrodes naturally have higher impedance (up to 100-200 kOhm is acceptable)
+    good_thresh = 100.0 if cap_type == "dry" else 30.0
+    accept_thresh = 200.0 if cap_type == "dry" else 100.0
+
     while True:
-            
         print(f"{Fore.YELLOW}[*] Measuring electrode impedances...{Style.RESET_ALL}")
         try:
             with gds_lock:
@@ -311,28 +335,30 @@ def run_impedance_loop(device):
                     color = Fore.WHITE + Style.DIM
                     status = f"Error ({imp:.1f})"
                     red_count += 1
-                elif imp <= 30.0:
+                elif imp <= good_thresh:
                     color = Fore.GREEN + Style.BRIGHT
                     status = "Good"
                     green_count += 1
-                elif imp <= 100.0:
+                elif imp <= accept_thresh:
                     color = Fore.YELLOW
                     status = "Acceptable"
                     yellow_count += 1
                 else:
                     color = Fore.RED
-                    status = "Poor Contact"
+                    status = "High / Poor Contact"
                     red_count += 1
                 print(f"  {Fore.CYAN}{name:<12}{Style.RESET_ALL} | {color}{imp:<18.2f}{Style.RESET_ALL} | {color}{status:<15}{Style.RESET_ALL}")
                 
             print("-" * 60)
-            print(f"Summary: {Fore.GREEN}{green_count} Good{Style.RESET_ALL} | {Fore.YELLOW}{yellow_count} Acceptable{Style.RESET_ALL} | {Fore.RED}{red_count} Poor/NC{Style.RESET_ALL}")
+            print(f"Summary ({cap_label}): {Fore.GREEN}{green_count} Good{Style.RESET_ALL} | {Fore.YELLOW}{yellow_count} Acceptable{Style.RESET_ALL} | {Fore.RED}{red_count} Poor/NC{Style.RESET_ALL}")
             
-            if cz_val is None or cz_val < 0:
-                print(f"\n{Fore.RED}[!] WARNING: Cz Reference channel is NOT making contact ({cz_val if cz_val else 'N/A'}).{Style.RESET_ALL}")
-                if cz_val == -10.0:
-                    print(f"{Fore.YELLOW}    Detail: Cz offset is too big (electrostatic saturation). Twist/part hair at Cz.{Style.RESET_ALL}")
-                print(f"{Fore.YELLOW}    All other electrodes will report 'Error' until Cz & GND are prepped, gelled, and touching the skin.{Style.RESET_ALL}")
+            if cz_val is None or cz_val < 0 or cz_val > accept_thresh:
+                print(f"\n{Fore.RED}[!] WARNING: Reference (Cz / Mastoid) is NOT making optimal contact ({cz_val if cz_val is not None else 'N/A'} kOhm).{Style.RESET_ALL}")
+                if cap_type == "dry":
+                    print(f"{Fore.YELLOW}    Detail (g.SAHARA): For dry setups, ensure the Mastoid Ground/Reference electrode has conductive paste/gel.{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}    If the reference contact floats or rails, ALL dry pins will saturate and flatline.{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}    Detail: Ensure Cz & GND are prepped, gelled, and touching the skin.{Style.RESET_ALL}")
                 
             if NON_INTERACTIVE:
                 print(f"{Fore.YELLOW}[*] Proceeding to streaming (non-interactive mode)...{Style.RESET_ALL}")
@@ -378,67 +404,108 @@ def configure_input_source(device):
         device.InputSignal = pygds.GNAUTILUS_INPUT_SIGNAL_ELECTRODE
         print(f"{Fore.GREEN}[+] Configured: Physical electrodes (Live EEG mode){Style.RESET_ALL}")
 
-def configure_hardware_filters(device):
+def configure_hardware_filters(device, cap_type="wet"):
     print_header("Hardware Filter Configuration")
-    print("By default, gds_to_lsl.py streams raw unfiltered EEG data (-1).")
-    print("LSL visualization programs (like lsl_viewer.py) usually handle filtering in software.")
-    
-    if NON_INTERACTIVE:
-        print(f"{Fore.GREEN}[+] Skipping hardware filters (using raw signal for software filtering in non-interactive mode).{Style.RESET_ALL}")
-        # Apply configured index to all channels (disabled)
-        for ch in device.Channels:
-            ch.Acquire = 1
-            ch.BandpassFilterIndex = -1
-            ch.NotchFilterIndex = -1
-            ch.BipolarChannel = -1
-        return
-        
-    choice = input("Do you want to enable hardware-level notch/bandpass filters? (y/n) [Default: n]: ").strip().lower()
-    
     bp_idx = -1
     notch_idx = -1
-    
-    if choice == 'y':
-        # 1. Bandpass Filters
-        bp_filters = device.GetBandpassFilters()[0]
-        bp_valid = [f for f in bp_filters if f['SamplingRate'] == device.SamplingRate]
-        
-        if bp_valid:
-            print(f"\nAvailable Bandpass Filters (for {device.SamplingRate} Hz):")
-            print("  [0] Disabled (Default)")
+
+    bp_filters = device.GetBandpassFilters()[0]
+    bp_valid = [f for f in bp_filters if f['SamplingRate'] == device.SamplingRate]
+
+    notch_filters = device.GetNotchFilters()[0]
+    notch_valid = [f for f in notch_filters if f['SamplingRate'] == device.SamplingRate]
+
+    if cap_type == "dry":
+        print(f"{Fore.YELLOW}[i] g.SAHARA Dry Mode Active:{Style.RESET_ALL} Enabling hardware bandpass filter to eliminate DC drift and prevent ADC saturation (rail limits).")
+        # Find recommended bandpass: preferably 0.5-30 Hz or 0.1-100 Hz or lowest cutoff >= 0.1 Hz
+        recommended_bp = None
+        for f in bp_valid:
+            if 0.1 <= f['LowerCutoffFrequency'] <= 1.0 and 25.0 <= f['UpperCutoffFrequency'] <= 100.0:
+                recommended_bp = f
+                break
+        if recommended_bp is None and len(bp_valid) > 0:
+            recommended_bp = bp_valid[0]
+
+        # Find 50/60 Hz notch
+        recommended_notch = notch_valid[0] if len(notch_valid) > 0 else None
+
+        if NON_INTERACTIVE:
+            if recommended_bp:
+                bp_idx = recommended_bp['BandpassFilterIndex']
+                print(f"{Fore.GREEN}[+] Auto-configured Dry Hardware Bandpass: {recommended_bp['LowerCutoffFrequency']}-{recommended_bp['UpperCutoffFrequency']} Hz{Style.RESET_ALL}")
+            if recommended_notch:
+                notch_idx = recommended_notch['NotchFilterIndex']
+                print(f"{Fore.GREEN}[+] Auto-configured Dry Hardware Notch: {recommended_notch['LowerCutoffFrequency']}-{recommended_notch['UpperCutoffFrequency']} Hz{Style.RESET_ALL}")
+        else:
+            print("\nRecommended Hardware Bandpass Filters for Dry Pins:")
             for i, f in enumerate(bp_valid):
-                print(f"  [{i+1}] {f['LowerCutoffFrequency']} - {f['UpperCutoffFrequency']} Hz (Order: {f['Order']})")
+                is_rec = " (Recommended)" if f == recommended_bp else ""
+                print(f"  [{i+1}] {f['LowerCutoffFrequency']} - {f['UpperCutoffFrequency']} Hz{is_rec}")
+            print(f"  [0] Disabled (Raw DC - Risk of Rail Saturation)")
             
-            bp_choice = input(f"Select bandpass filter (0-{len(bp_valid)}) [Default: 0]: ").strip()
-            if bp_choice and bp_choice != '0':
+            def_choice = bp_valid.index(recommended_bp) + 1 if recommended_bp in bp_valid else 1
+            choice = input(f"Select bandpass filter [Default: {def_choice}]: ").strip()
+            if not choice:
+                choice = str(def_choice)
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(bp_valid):
+                    bp_idx = bp_valid[idx]['BandpassFilterIndex']
+                    print(f"{Fore.GREEN}[+] Bandpass configured: {bp_valid[idx]['LowerCutoffFrequency']}-{bp_valid[idx]['UpperCutoffFrequency']} Hz{Style.RESET_ALL}")
+            except ValueError:
+                pass
+
+            if notch_valid:
+                print("\nAvailable Hardware Notch Filters:")
+                for i, f in enumerate(notch_valid):
+                    print(f"  [{i+1}] {f['LowerCutoffFrequency']} - {f['UpperCutoffFrequency']} Hz")
+                print("  [0] Disabled")
+                n_choice = input(f"Select notch filter [Default: 1]: ").strip()
+                if not n_choice:
+                    n_choice = "1"
                 try:
-                    idx = int(bp_choice) - 1
-                    if 0 <= idx < len(bp_valid):
-                        bp_idx = bp_valid[idx]['BandpassFilterIndex']
-                        print(f"{Fore.GREEN}[+] Bandpass configured to: {bp_valid[idx]['LowerCutoffFrequency']}-{bp_valid[idx]['UpperCutoffFrequency']} Hz{Style.RESET_ALL}")
-                except ValueError:
-                    pass
-                    
-        # 2. Notch Filters
-        notch_filters = device.GetNotchFilters()[0]
-        notch_valid = [f for f in notch_filters if f['SamplingRate'] == device.SamplingRate]
-        
-        if notch_valid:
-            print(f"\nAvailable Notch Filters (for {device.SamplingRate} Hz):")
-            print("  [0] Disabled (Default)")
-            for i, f in enumerate(notch_valid):
-                print(f"  [{i+1}] {f['LowerCutoffFrequency']} - {f['UpperCutoffFrequency']} Hz (Order: {f['Order']})")
-                
-            notch_choice = input(f"Select notch filter (0-{len(notch_valid)}) [Default: 0]: ").strip()
-            if notch_choice and notch_choice != '0':
-                try:
-                    idx = int(notch_choice) - 1
+                    idx = int(n_choice) - 1
                     if 0 <= idx < len(notch_valid):
                         notch_idx = notch_valid[idx]['NotchFilterIndex']
-                        print(f"{Fore.GREEN}[+] Notch configured to: {notch_valid[idx]['LowerCutoffFrequency']}-{notch_valid[idx]['UpperCutoffFrequency']} Hz{Style.RESET_ALL}")
+                        print(f"{Fore.GREEN}[+] Notch configured: {notch_valid[idx]['LowerCutoffFrequency']}-{notch_valid[idx]['UpperCutoffFrequency']} Hz{Style.RESET_ALL}")
                 except ValueError:
                     pass
-                    
+    else:
+        print("Wet Mode: By default, raw unfiltered EEG data (-1) is streamed for software filtering.")
+        if NON_INTERACTIVE:
+            print(f"{Fore.GREEN}[+] Skipping hardware filters in non-interactive wet mode (raw signal).{Style.RESET_ALL}")
+        else:
+            choice = input("Do you want to enable hardware-level notch/bandpass filters? (y/n) [Default: n]: ").strip().lower()
+            if choice == 'y':
+                if bp_valid:
+                    print(f"\nAvailable Bandpass Filters (for {device.SamplingRate} Hz):")
+                    print("  [0] Disabled (Default)")
+                    for i, f in enumerate(bp_valid):
+                        print(f"  [{i+1}] {f['LowerCutoffFrequency']} - {f['UpperCutoffFrequency']} Hz (Order: {f['Order']})")
+                    bp_choice = input(f"Select bandpass filter (0-{len(bp_valid)}) [Default: 0]: ").strip()
+                    if bp_choice and bp_choice != '0':
+                        try:
+                            idx = int(bp_choice) - 1
+                            if 0 <= idx < len(bp_valid):
+                                bp_idx = bp_valid[idx]['BandpassFilterIndex']
+                                print(f"{Fore.GREEN}[+] Bandpass configured: {bp_valid[idx]['LowerCutoffFrequency']}-{bp_valid[idx]['UpperCutoffFrequency']} Hz{Style.RESET_ALL}")
+                        except ValueError:
+                            pass
+                if notch_valid:
+                    print(f"\nAvailable Notch Filters (for {device.SamplingRate} Hz):")
+                    print("  [0] Disabled (Default)")
+                    for i, f in enumerate(notch_valid):
+                        print(f"  [{i+1}] {f['LowerCutoffFrequency']} - {f['UpperCutoffFrequency']} Hz (Order: {f['Order']})")
+                    notch_choice = input(f"Select notch filter (0-{len(notch_valid)}) [Default: 0]: ").strip()
+                    if notch_choice and notch_choice != '0':
+                        try:
+                            idx = int(notch_choice) - 1
+                            if 0 <= idx < len(notch_valid):
+                                notch_idx = notch_valid[idx]['NotchFilterIndex']
+                                print(f"{Fore.GREEN}[+] Notch configured: {notch_valid[idx]['LowerCutoffFrequency']}-{notch_valid[idx]['UpperCutoffFrequency']} Hz{Style.RESET_ALL}")
+                        except ValueError:
+                            pass
+
     # Apply configured index to all channels
     for ch in device.Channels:
         ch.Acquire = 1
@@ -447,7 +514,20 @@ def configure_hardware_filters(device):
         ch.BipolarChannel = -1
 
 def main():
-    global current_battery_level
+    global current_battery_level, NON_INTERACTIVE
+    import argparse
+    parser = argparse.ArgumentParser(description="g.Nautilus EEG & fNIRS to Lab Streaming Layer (LSL) Bridge")
+    parser.add_argument("--cap-type", choices=["wet", "dry", "sahara"], default=None, help="Electrode cap type: 'wet' (gel) or 'dry'/'sahara' (pins)")
+    parser.add_argument("--non-interactive", "-y", action="store_true", help="Run without interactive CLI prompts")
+    parser.add_argument("--sampling-rate", "-fs", type=int, default=None, help="Force specific sampling rate (Hz)")
+    args, _ = parser.parse_known_args()
+
+    if args.non_interactive:
+        NON_INTERACTIVE = True
+
+    # 0. Select Cap Type (Wet vs Dry g.SAHARA)
+    cap_type = select_cap_type(args.cap_type)
+
     # 1. Connect
     device, serial, is_fnirs_device = connect_headset()
     
@@ -466,14 +546,14 @@ def main():
         # 3. Calibration
         run_calibration(device)
         
-        # 4. Impedance Check Loop
-        run_impedance_loop(device)
+        # 4. Impedance Check Loop with Cap Type
+        run_impedance_loop(device, cap_type=cap_type)
         
         # 5. Input Source Selection (Physical vs Test)
         configure_input_source(device)
         
-        # 6. Hardware Filters
-        configure_hardware_filters(device)
+        # 6. Hardware Filters (Auto bandpass in Dry mode to prevent DC railing)
+        configure_hardware_filters(device, cap_type=cap_type)
         
         # 7. Apply settings to hardware
         print(f"\n{Fore.YELLOW}[*] Uploading configuration to headset hardware...{Style.RESET_ALL}")
@@ -500,6 +580,7 @@ def main():
 
         print_header("Lab Streaming Layer (LSL) Output")
         print(f"Headset Name: {stream_name_str} (Serial: {serial})")
+        print(f"Cap Hardware: {'g.SAHARA Dry Pins' if cap_type == 'dry' else 'Wet Gel Electrodes'}")
         print(f"Sampling Rate: {sampling_rate} Hz")
         print(f"Active Channels: {num_channels}")
         print(f"Channel Names: {channel_names}")
@@ -525,8 +606,7 @@ def main():
         outlet = StreamOutlet(info)
         print(f"\n{Fore.GREEN}[+] LSL Outlet created successfully. Stream name: '{stream_name_str}', type: '{stream_type_str}'{Style.RESET_ALL}")
 
-        
-        # Start background battery logger thread (uses data streamed in daq_callback, zero GDS collisions!)
+        # Start background battery logger thread
         battery_thread = threading.Thread(target=battery_monitor_loop, args=(serial,))
         battery_thread.daemon = True
         battery_thread.start()
@@ -534,8 +614,10 @@ def main():
         # LSL Push Block size
         block_size = device.NumberOfScans
         
-        # Streaming Callback
+        # Streaming Callback with Rail Detection
+        last_rail_warn = 0
         def daq_callback(data_block):
+            nonlocal last_rail_warn
             global current_battery_level
             
             # Extract battery level from data block column in real-time
@@ -545,10 +627,21 @@ def main():
             stamp = local_clock()
             outlet.push_chunk(data_block.tolist(), stamp)
             
-            # Print pulse to show life
-            if time.time() % 3 < 0.05:
-                bat_str = f" | Battery: {current_battery_level:.1f}%" if current_battery_level is not None else ""
-                print(f"[{Fore.GREEN}LSL STREAMING{Style.RESET_ALL}] Pushed chunk size: {len(data_block)} | LSL clock: {stamp:.3f}{bat_str}")
+            # Live Rail Detection (Check if any channel hits ceiling / floor or flatlines)
+            now = time.time()
+            if now - last_rail_warn > 4.0:
+                eeg_block = data_block[:, :min(32, data_block.shape[1])]
+                max_abs = np.max(np.abs(eeg_block), axis=0)
+                stds = np.std(eeg_block, axis=0)
+                # Saturated: absolute voltage > 150 mV (150,000 uV) or dead flat (std == 0)
+                railed_indices = [i for i, (m, s) in enumerate(zip(max_abs, stds)) if m > 150000.0 or (s < 0.01 and m > 1000.0)]
+                if railed_indices:
+                    bad_chans = [channel_names[i] for i in railed_indices if i < len(channel_names)]
+                    print(f"[{Fore.RED}RAIL WARNING{Style.RESET_ALL}] Electrodes saturating rails: {', '.join(bad_chans)}! Check contact/ground at mastoid.")
+                    last_rail_warn = now
+                elif now % 3 < 0.05:
+                    bat_str = f" | Battery: {current_battery_level:.1f}%" if current_battery_level is not None else ""
+                    print(f"[{Fore.GREEN}LSL STREAMING{Style.RESET_ALL}] Pushed chunk size: {len(data_block)} | LSL clock: {stamp:.3f}{bat_str}")
             return True
             
         print(f"\n{Fore.GREEN}[+] LSL EEG stream is broadcasting!{Style.RESET_ALL}")

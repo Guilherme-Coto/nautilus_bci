@@ -40,6 +40,7 @@ except ImportError:
     HAS_LSL = False
 
 from visualizers.eeg_headmap_quality_visualizer import HeadMapCanvas, ELECTRODE_POSITIONS_1020
+from analysis.spatial_filters import apply_spatial_filter
 
 
 def resolve_script_path(script_name):
@@ -63,6 +64,7 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         self.initial_bids_root = initial_bids_root
         # Process handles
         self.streamer_process = None
+        self.mock_streamer_process = None
         self.watch_bridge_process = None
 
         # LSL Stream Inlets
@@ -173,10 +175,33 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         top_bar = QtWidgets.QGroupBox("🎛️ Master Control & Stream Launcher")
         top_layout = QtWidgets.QHBoxLayout(top_bar)
 
-        self.btn_streamer = QtWidgets.QPushButton("▶ Launch EEG Streamer")
+        # Cap Mode Selector
+        top_layout.addWidget(QtWidgets.QLabel("Cap Mode:"))
+        self.combo_cap_type = QtWidgets.QComboBox()
+        self.combo_cap_type.addItem("💧 Wet (Gel / Ag-AgCl)", "wet")
+        self.combo_cap_type.addItem("🌵 Dry (g.SAHARA Pins)", "dry")
+        self.combo_cap_type.setStyleSheet("background-color: #191E2A; color: #4DEEEA; font-weight: bold; padding: 4px 8px; border: 1px solid #2C354A; border-radius: 4px;")
+        top_layout.addWidget(self.combo_cap_type)
+
+        # Spatial Referencing Selector
+        top_layout.addWidget(QtWidgets.QLabel("Spatial Ref:"))
+        self.combo_spatial_ref = QtWidgets.QComboBox()
+        self.combo_spatial_ref.addItem("Robust CAR (Median)", "robust_car")
+        self.combo_spatial_ref.addItem("Standard CAR (Mean)", "car")
+        self.combo_spatial_ref.addItem("Surface Laplacian (Hjorth)", "laplacian")
+        self.combo_spatial_ref.addItem("Raw / Mastoid (None)", "raw")
+        self.combo_spatial_ref.setStyleSheet("background-color: #191E2A; color: #4DEEEA; font-weight: bold; padding: 4px 8px; border: 1px solid #2C354A; border-radius: 4px;")
+        top_layout.addWidget(self.combo_spatial_ref)
+
+        self.btn_streamer = QtWidgets.QPushButton("▶ Launch Hardware EEG Streamer")
         self.btn_streamer.setStyleSheet("background-color: #2980B9; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
         self.btn_streamer.clicked.connect(self.toggle_eeg_streamer)
         top_layout.addWidget(self.btn_streamer)
+
+        self.btn_mock_streamer = QtWidgets.QPushButton("🧪 Mock EEG Streamer")
+        self.btn_mock_streamer.setStyleSheet("background-color: #27AE60; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+        self.btn_mock_streamer.clicked.connect(self.toggle_mock_streamer)
+        top_layout.addWidget(self.btn_mock_streamer)
 
         self.btn_watch_bridge = QtWidgets.QPushButton("⌚ Launch Watch Bridge")
         self.btn_watch_bridge.setStyleSheet("background-color: #8E44AD; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
@@ -333,14 +358,27 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
     def toggle_eeg_streamer(self):
         if self.streamer_process is None:
             script_path = resolve_script_path("gds_to_lsl.py")
-            self.streamer_process = subprocess.Popen([sys.executable, script_path, "--non-interactive"])
-            self.btn_streamer.setText("⏹ Stop Hardware EEG Streamer")
+            selected_cap = self.combo_cap_type.currentData() or "wet"
+            self.streamer_process = subprocess.Popen([sys.executable, script_path, "--non-interactive", "--cap-type", selected_cap])
+            self.btn_streamer.setText("⏹ Stop Hardware Streamer")
             self.btn_streamer.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
         else:
             self.streamer_process.terminate()
             self.streamer_process = None
             self.btn_streamer.setText("▶ Launch Hardware EEG Streamer")
             self.btn_streamer.setStyleSheet("background-color: #2980B9; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+
+    def toggle_mock_streamer(self):
+        if self.mock_streamer_process is None:
+            script_path = resolve_script_path("mock_lsl_streamer.py")
+            self.mock_streamer_process = subprocess.Popen([sys.executable, script_path])
+            self.btn_mock_streamer.setText("⏹ Stop Mock Streamer")
+            self.btn_mock_streamer.setStyleSheet("background-color: #C0392B; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+        else:
+            self.mock_streamer_process.terminate()
+            self.mock_streamer_process = None
+            self.btn_mock_streamer.setText("🧪 Mock EEG Streamer")
+            self.btn_mock_streamer.setStyleSheet("background-color: #27AE60; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
 
     def toggle_watch_bridge(self):
         if self.watch_bridge_process is None:
@@ -465,6 +503,12 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
         channel_maxs = {}
         good_count = 0
         flat_count = 0
+        is_dry = (self.combo_cap_type.currentData() == "dry")
+
+        # Thresholds adapted for dry pins vs wet gel
+        rail_mean_thresh = 600.0 if is_dry else 300.0
+        rail_ptp_thresh = 1000.0 if is_dry else 500.0
+        noise_std_thresh = 120.0 if is_dry else 80.0
 
         # Raw metrics directly from API buffer (DC offset & true raw range)
         raw_offsets = np.mean(self.eeg_buffer, axis=0)
@@ -487,7 +531,10 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
                 item = QtWidgets.QTableWidgetItem("NO CONTACT / FLAT")
                 item.setForeground(QtGui.QColor("#E74C3C"))
                 flat_count += 1
-            elif std_val > 250.0:
+            elif abs(raw_dc) > (rail_mean_thresh * 1000.0) or raw_p2p > (rail_ptp_thresh * 1000.0):
+                item = QtWidgets.QTableWidgetItem("RAILED/SATURATED")
+                item.setForeground(QtGui.QColor("#E67E22"))
+            elif std_val > noise_std_thresh:
                 item = QtWidgets.QTableWidgetItem("HIGH NOISE / ARTIFACT")
                 item.setForeground(QtGui.QColor("#F1C40F"))
             else:
@@ -498,10 +545,16 @@ class MultimodalBCIDashboard(QtWidgets.QMainWindow):
             self.table_quality.setItem(i, 2, item)
 
         self.headmap_canvas.update_channel_status(channel_stds, channel_maxs)
-        self.lbl_headmap_summary.setText(f"Electrode Contact: {good_count}/32 Positioned ({flat_count} Disconnected)")
+        cap_name = "Dry (SAHARA)" if is_dry else "Wet"
+        self.lbl_headmap_summary.setText(f"Active Channels ({cap_name}): {good_count}/32 Positioned ({flat_count} Disconnected)")
 
     def render_waves_tab(self):
-        filt = self.eeg_buffer - np.mean(self.eeg_buffer, axis=0)
+        # 1. Apply selected Spatial Reference (Robust CAR, Surface Laplacian, Standard CAR, or Raw)
+        ref_mode = self.combo_spatial_ref.currentData() or "robust_car"
+        cap_mode = self.combo_cap_type.currentData() or "wet"
+        filt = apply_spatial_filter(self.eeg_buffer, self.eeg_ch_names, mode=ref_mode, cap_type=cap_mode)
+
+        # 2. Apply Temporal Bandpass Filter
         try:
             filt = signal.filtfilt(self.b_bp, self.a_bp, filt, axis=0)
         except Exception:
