@@ -1,0 +1,5 @@
+onset	duration	trial_type	value	sample
+0.48	7.982	Box start blinking	1	120
+5.984	5.504	Box stop blinking	2	1496
+5.984	0.0	FIRE selected	3	1496
+17.772	2.643801	Box start blinking	1	4443

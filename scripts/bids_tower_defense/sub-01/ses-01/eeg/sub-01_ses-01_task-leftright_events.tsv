@@ -1,0 +1,18 @@
+onset	duration	trial_type	value	sample
+8.44	0.0	Game_Started_scene_fire	5	2110
+16.244	7.813	Box start blinking	1	4061
+21.756	5.512	Box stop blinking	2	5439
+21.756	0.001	FIRE selected	3	5439
+33.664	11.905	Box start blinking	1	8416
+39.164	5.503	Box stop blinking	2	9791
+39.168	0.001	FIRE selected	3	9792
+50.712	11.546	Box start blinking	1	12678
+56.216	5.503	Box stop blinking	2	14054
+56.216	0.0	FIRE selected	3	14054
+67.7	11.484	Box start blinking	1	16925
+73.204	5.504	Box stop blinking	2	18301
+73.204	0.001	FIRE selected	3	18301
+84.688	11.482	Box start blinking	1	21172
+90.192	5.504	Box stop blinking	2	22548
+90.192	0.001	FIRE selected	3	22548
+93.676	3.485	Game Finished	4	23419
