@@ -1253,5 +1253,55 @@
         "timestamp": "2026-08-26T19:23:59.038896",
         "battery_level": 80.0,
         "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:10:36.839087",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:15:36.940878",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:20:37.045632",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:25:37.148197",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:30:37.257086",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:35:37.374649",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:40:37.490265",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:45:37.612924",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:50:37.728333",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
+    },
+    {
+        "timestamp": "2026-09-01T11:55:37.834503",
+        "battery_level": 80.0,
+        "device_serial": "NP-2026.05.01"
     }
 ]
